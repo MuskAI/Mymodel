@@ -75,6 +75,8 @@ def l1_loss(prediction,label):
 def smooth_l1_loss(prediction, label):
     return torch.nn.SmoothL1Loss()(prediction,label)
 
+def CE_loss(prediction,label):
+    return torch.nn.CrossEntropyLoss()(prediction,label)
 
 
 
@@ -94,3 +96,4 @@ def my_precision_score(prediction,label):
 
 def my_f1_score(prediction,label):
     return f1_score(prediction,label)
+

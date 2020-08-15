@@ -16,8 +16,12 @@ import torchvision
 class DataParser():
     def __init__(self, batch_size_train):
 
-        self.train_file = 'C:\\Users\\musk\\Desktop\\test_cp\\tamper_result'
-        self.double_edge_file = 'C:\\Users\\musk\\Desktop\\test_cp\\ground_truth_result'
+        self.train_file = '/home/liu/chenhaoran/datasets/tamper_result'
+        self.double_edge_file = '/home/liu/chenhaoran/datasets/ground_truth_result'
+
+        #self.train_file = 'C:\\Users\\musk\\Desktop\\fix_bk\\tamper_result'
+        #self.double_edge_file = 'C:\\Users\\musk\\Desktop\\fix_bk\\ground_truth_result'
+
         # self.save_path0_1 = '/home/libiao/数据/6.1混合数据/e0_1'
         # self.save_path1_1 = '/home/libiao/数据/6.1混合数据/e1_1'
         # self.save_path01 = '/home/libiao/数据/6.1混合数据/e01'

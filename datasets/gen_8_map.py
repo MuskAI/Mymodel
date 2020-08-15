@@ -27,7 +27,7 @@ def gen_8_2_map(mask, mask_area = 50, mask_edge = 255, not_mask_edge = 100, not_
     relation_8_map = []
     edge_loc_=[1,1]
     # 找到内侧和外侧边缘
-    mask_pad = np.pad(mask,(1,1))
+    mask_pad = np.pad(mask,(1,1),mode='constant')
     mask_pad = np.where(mask_pad == 50,0,mask_pad)
     edge_loc = np.where(mask_pad == mask_edge)
     edge_loc_1 = np.where(mask_pad == not_mask_edge)
