@@ -142,7 +142,7 @@ def train(model,optimizer,epoch,save_dir):
         optimizer.zero_grad()
         outputs = model(images)
         # 四张GT监督
-        loss = smooth_l1_loss(outputs[0],labels[0])
+        loss = smooth_l1_loss(outputs[0],labels[0]) *12
         # for o in outputs[9:]: # o2 o3 o4
         #     t_loss = cross_entropy_loss(o, labels[-1])
         #     loss = loss +t_loss
@@ -150,14 +150,11 @@ def train(model,optimizer,epoch,save_dir):
 
         for c_index,c in enumerate(outputs[1:]):
             loss = loss + smooth_l1_loss(c, labels[c_index+1])
-        loss = loss/9
+        loss = loss/20
         loss.backward()
 
         # acc_scroe = my_accuracy_score(outputs[9].cpu().detach().numpy(),labels[-1].cpu().detach().numpy())
         # print('the acc is :',acc_scroe)
-
-
-
 
         # 下面应该是用来解决batch size 过下的问题
         # if counter == args.itersize:
@@ -184,8 +181,6 @@ def train(model,optimizer,epoch,save_dir):
                        loss=losses)
 
             print(info)
-        if batch_index == dataParser.steps_per_epoch:
-            break
 
     torch.save(model, join('./record/epoch-%d-training-record.pth' % epoch))
     print('sava successfully')
@@ -197,35 +192,98 @@ def train(model,optimizer,epoch,save_dir):
 
 
 
-def test():
-    pass
+def val(model,epoch):
+    dataParser = DataParser(args.batch_size)
+    batch_time = Averagvalue()
+    data_time = Averagvalue()
+    losses = Averagvalue()
+    # switch to train mode
+    model.eval()
+    end = time.time()
+    epoch_loss = []
+    counter = 0
 
+    for batch_index ,(images,labels_numpy) in enumerate(generate_minibatches(dataParser,False)):
+
+        # measure data loading time
+        data_time.update(time.time()-end)
+
+        labels = []
+        if torch.cuda.is_available():
+            images = torch.from_numpy(images).cuda()
+            for item in labels_numpy:
+                labels.append(torch.from_numpy(item).cuda())
+        else:
+            images = torch.from_numpy(images)
+            for item in labels_numpy:
+                labels.append(torch.from_numpy(item))
+
+        if torch.cuda.is_available():
+            loss =torch.zeros(1).cuda()
+        else:
+            loss = torch.zeros(1)
+
+
+        outputs = model(images)
+        # 四张GT监督
+        loss = smooth_l1_loss(outputs[0],labels[0])*12
+        # for o in outputs[9:]: # o2 o3 o4
+        #     t_loss = cross_entropy_loss(o, labels[-1])
+        #     loss = loss +t_loss
+        # counter +=1
+
+        for c_index,c in enumerate(outputs[1:]):
+            loss = loss + smooth_l1_loss(c, labels[c_index+1])
+        loss = loss/20
+
+        # acc_scroe = my_accuracy_score(outputs[9].cpu().detach().numpy(),labels[-1].cpu().detach().numpy())
+        # print('the acc is :',acc_scroe)
+
+        # measure the accuracy and record loss
+        losses.update(loss.item(),images.size(0))
+        epoch_loss.append(loss.item())
+        batch_time.update(time.time()-end)
+        end = time.time()
+
+        if batch_index % 5 ==0:
+            info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.steps_per_epoch) + \
+                   'Time {batch_time.val:.3f} (avg:{batch_time.avg:.3f}) '.format(batch_time=batch_time) + \
+                   'Loss {loss.val:f} (avg:{loss.avg:f}) '.format(
+                       loss=losses)
+
+            print(info)
+
+    return losses.avg,epoch_loss
 
 def main():
-    model = Net()
-    # model = torch.load('record/epoch-9-training-record.pth')
+    # 模型可持续化
+    save_model_path = os.listdir('save_model/8-17')
+    if save_model_path !='':
+        model = torch.load(save_model_path[-1])
+    else:
+        model = Net()
+    #
     # 模型可视化
 
     if torch.cuda.is_available():
         model.cuda()
     else:
         pass
-    model.apply(weights_init)
+    # model.apply(weights_init)
 
-    if args.resume:
-        if isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            model.load_state_dict(checkpoint['state_dict'])
-            print("=> loaded checkpoint '{}'"
-                  .format(args.resume))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+    # if args.resume:
+    #     if isfile(args.resume):
+    #         print("=> loading checkpoint '{}'".format(args.resume))
+    #         checkpoint = torch.load(args.resume)
+    #         model.load_state_dict(checkpoint['state_dict'])
+    #         print("=> loaded checkpoint '{}'"
+    #               .format(args.resume))
+    #     else:
+    #         print("=> no checkpoint found at '{}'".format(args.resume))
 
     # 数据处理
     # 直接在train里面处理
     # dataParser = DataParser(batch_size)
-    loss_function = nn.L1Loss()
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     # train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,milestones=settings.MILESTONES,gamma=0.2)#learning rate decay
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
@@ -241,7 +299,9 @@ def main():
             # 暂时空着
 
         tr_avg_loss, tr_detail_loss = train(model = model,optimizer = optimizer,epoch= epoch,save_dir=join(TMP_DIR, 'epoch-%d-training-record' % epoch))
+        val_avg_loss, val_detail_loss = val(model=model,epoch=epoch)
         writer.add_scalar('tr_avg_loss', tr_avg_loss, global_step=epoch)
+        writer.add_scalar('val_avg_loss', val_avg_loss, global_step=epoch)
         # log.flush()
         # Save checkpoint
         save_file = os.path.join(TMP_DIR, 'checkpoint_epoch{}.pth'.format(epoch))

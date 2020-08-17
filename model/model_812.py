@@ -80,22 +80,24 @@ class Aspp(nn.Module):
             ('b3_bn', nn.BatchNorm2d(256)),
             ('b3_relu', nn.ReLU(inplace=True))
         ]))
-
+        # self.b4_ = nn.AdaptiveAvgPool2d((1, 1))
         self.b4 = nn.Sequential(OrderedDict([
-            ('b4_averagepool', nn.AvgPool2d(kernel_size=(self.out_shape, self.out_shape1))),
+            ('b4_averagepool', nn.AdaptiveAvgPool2d((1,1))),
             ('b4_conv', nn.Conv2d(256, 128, kernel_size=1, bias=False)),
             ('b4_bn', nn.BatchNorm2d(128)),
             ('b4_relu', nn.ReLU(inplace=True)),
-            (
-                'b4_bilinearUpsampling',
-                nn.UpsamplingBilinear2d(size=(self.out_shape, self.out_shape1), scale_factor=None))
+            ('b4_bilinearUpsampling',nn.UpsamplingBilinear2d(size=(self.out_shape, self.out_shape1), scale_factor=None))
         ]))
+
 
     def forward(self, x):
         b0_ = self.b0(x)
         b1_ = self.b1(x)
         b2_ = self.b2(x)
         b3_ = self.b3(x)
+        print(b3_.shape)
+        print('the input x:', x.shape)
+        # b4_ = self.b4(x)
         b4_ = self.b4(x)
         x = torch.cat([b4_, b0_, b1_, b2_, b3_], dim=1)
         return x
@@ -538,4 +540,4 @@ class Net(nn.Module):
 
 if __name__ == '__main__':
     model = Net()
-    summary(model,(3,320,320))
+    summary(model.cuda(),(3,320,320))
