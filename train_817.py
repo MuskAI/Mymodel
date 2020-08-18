@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from functions import my_f1_score,my_accuracy_score,my_precision_score
+from functions import my_f1_score,my_accuracy_score,my_precision_score,weighted_cross_entropy_loss
 import conf.global_setting as settings
 #from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR
 from datasets.dataset import DataParser
@@ -32,14 +32,14 @@ from utils import Logger, Averagvalue, save_checkpoint, load_vgg16pretrain
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=1, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=6, type=int, metavar='BT',
                     help='batch size')
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-5, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-4, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
-parser.add_argument('--weight_decay', '--wd', default=2e-4, type=float,
+parser.add_argument('--weight_decay', '--wd', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
 parser.add_argument('--stepsize', default=3, type=int,
                     metavar='SS', help='learning rate step size')
@@ -50,7 +50,7 @@ parser.add_argument('--maxepoch', default=100, type=int, metavar='N',
 parser.add_argument('--itersize', default=10, type=int,
                     metavar='IS', help='iter size')
 # =============== misc
-parser.add_argument('--start_epoch', default=10, type=int, metavar='N',
+parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
 parser.add_argument('--print_freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 50)')
@@ -71,16 +71,7 @@ TMP_DIR = join(THIS_DIR, args.tmp)
 if not isdir(TMP_DIR):
   os.makedirs(TMP_DIR)
 
-writer = SummaryWriter('runs/Aug15_17-32-57_liu-MS-7B89')
-def weights_init(m):
-    if isinstance(m, nn.Conv2d):
-        # xavier(m.weight.data)
-        m.weight.data.normal_(0, 0.01)
-        if m.weight.data.shape == torch.Size([1, 5, 1, 1]):
-            # for new_score_weight
-            torch.nn.init.constant_(m.weight, 0.2)
-        if m.bias is not None:
-            m.bias.data.zero_()
+writer = SummaryWriter('runs/Aug18')
 
 def generate_minibatches(dataParser, train=True):
     while True:
@@ -104,6 +95,14 @@ def generate_minibatches(dataParser, train=True):
         chanel7 = chanel7.transpose(0, 3, 1, 2)
         chanel8 = chanel8.transpose(0, 3, 1, 2)
         double_edge = double_edge.transpose(0,3,1,2)
+        # ims_t = ims.transpose(0,1,2,3)
+        # plt.figure('ims')
+        # plt.imshow(ims[0,0,:,:]*255)
+        # plt.show()
+        #
+        # plt.figure('gt')
+        # plt.imshow(double_edge[0,0,:,:])
+        # plt.show()
         yield(ims,[double_edge,chanel1,chanel2,chanel3,chanel4,chanel5,chanel6,chanel7,chanel8])
 
 
@@ -117,7 +116,6 @@ def train(model,optimizer,epoch,save_dir):
     end = time.time()
     epoch_loss = []
     counter = 0
-
 
     for batch_index ,(images,labels_numpy) in enumerate(generate_minibatches(dataParser,True)):
 
@@ -142,14 +140,22 @@ def train(model,optimizer,epoch,save_dir):
         optimizer.zero_grad()
         outputs = model(images)
         # 四张GT监督
-        loss = smooth_l1_loss(outputs[0],labels[0]) *12
+        show_outputs = np.array(outputs[0].cpu().detach())
+        show_labels = np.array(labels[0].cpu().detach())
+        # plt.figure('ouput')
+        # plt.imshow(show_outputs[0,0,:,:])
+        # plt.show()
+        # plt.figure('labels')
+        # plt.imshow(show_labels[0, 0, :, :])
+        # plt.show()
+        loss = cross_entropy_loss(outputs[0],labels[0])*12
         # for o in outputs[9:]: # o2 o3 o4
         #     t_loss = cross_entropy_loss(o, labels[-1])
         #     loss = loss +t_loss
         # counter +=1
 
         for c_index,c in enumerate(outputs[1:]):
-            loss = loss + smooth_l1_loss(c, labels[c_index+1])
+            loss = loss + cross_entropy_loss(c, labels[c_index+1])
         loss = loss/20
         loss.backward()
 
@@ -181,6 +187,9 @@ def train(model,optimizer,epoch,save_dir):
                        loss=losses)
 
             print(info)
+
+        if batch_index == dataParser.steps_per_epoch:
+            break
 
     torch.save(model, join('./record/epoch-%d-training-record.pth' % epoch))
     print('sava successfully')
@@ -226,14 +235,14 @@ def val(model,epoch):
 
         outputs = model(images)
         # 四张GT监督
-        loss = smooth_l1_loss(outputs[0],labels[0])*12
+        loss = cross_entropy_loss(outputs[0],labels[0])*12
         # for o in outputs[9:]: # o2 o3 o4
         #     t_loss = cross_entropy_loss(o, labels[-1])
         #     loss = loss +t_loss
         # counter +=1
 
         for c_index,c in enumerate(outputs[1:]):
-            loss = loss + smooth_l1_loss(c, labels[c_index+1])
+            loss = loss + cross_entropy_loss(c, labels[c_index+1])
         loss = loss/20
 
         # acc_scroe = my_accuracy_score(outputs[9].cpu().detach().numpy(),labels[-1].cpu().detach().numpy())
@@ -246,19 +255,21 @@ def val(model,epoch):
         end = time.time()
 
         if batch_index % 5 ==0:
-            info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.steps_per_epoch) + \
+            info = 'val:'+'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.steps_per_epoch) + \
                    'Time {batch_time.val:.3f} (avg:{batch_time.avg:.3f}) '.format(batch_time=batch_time) + \
                    'Loss {loss.val:f} (avg:{loss.avg:f}) '.format(
                        loss=losses)
 
             print(info)
+        if batch_index == dataParser.steps_per_epoch//10:
+            break
 
     return losses.avg,epoch_loss
 
 def main():
     # 模型可持续化
-    save_model_path = os.listdir('save_model/8-17')
-    if save_model_path !='':
+    save_model_path = os.listdir('save_model/8-17/')
+    if save_model_path !=[]:
         model = torch.load(save_model_path[-1])
     else:
         model = Net()
@@ -269,7 +280,7 @@ def main():
         model.cuda()
     else:
         pass
-    # model.apply(weights_init)
+    model.apply(weights_init)
 
     # if args.resume:
     #     if isfile(args.resume):
@@ -281,11 +292,7 @@ def main():
     #     else:
     #         print("=> no checkpoint found at '{}'".format(args.resume))
 
-    # 数据处理
-    # 直接在train里面处理
-    # dataParser = DataParser(batch_size)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    # train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,milestones=settings.MILESTONES,gamma=0.2)#learning rate decay
+    optimizer = optim.Adam(model.parameters(), lr=args.lr,betas=(0.9,0.999),eps=1e-8)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
     log = Logger(join(TMP_DIR, '%s-%d-log.txt' % ('Adam', args.lr)))
@@ -299,18 +306,23 @@ def main():
             # 暂时空着
 
         tr_avg_loss, tr_detail_loss = train(model = model,optimizer = optimizer,epoch= epoch,save_dir=join(TMP_DIR, 'epoch-%d-training-record' % epoch))
-        val_avg_loss, val_detail_loss = val(model=model,epoch=epoch)
+        # val_avg_loss, val_detail_loss = val(model=model,epoch=epoch)
         writer.add_scalar('tr_avg_loss', tr_avg_loss, global_step=epoch)
-        writer.add_scalar('val_avg_loss', val_avg_loss, global_step=epoch)
+        # writer.add_scalar('val_avg_loss', val_avg_loss, global_step=epoch)
         # log.flush()
         # Save checkpoint
         save_file = os.path.join(TMP_DIR, 'checkpoint_epoch{}.pth'.format(epoch))
         # save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()})
-
-        scheduler.step()  # 自动调整学习率
+        scheduler.step()
         train_loss.append(tr_avg_loss)
         train_loss_detail += tr_detail_loss
 
+def weights_init(m):
+    if isinstance(m, nn.Conv2d):
+        # xavier(m.weight.data)
+        m.weight.data.normal_(0, 0.01)
+        if m.bias is not None:
+            m.bias.data.zero_()
 
 if __name__ == '__main__':
     main()

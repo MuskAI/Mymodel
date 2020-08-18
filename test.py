@@ -82,8 +82,8 @@ def read_test_data():
 if __name__ == '__main__':
     try:
         test_data_path = '/home/liu/chenhaoran/8-10测试结果实验/实验数据准备/生成数据test/cm'
-        output_path = 'test_record/test_817'
-        model_path = './record/epoch-20-training-record.pth'
+        output_path = 'test_record/test_817/'
+        model_path = './record2/epoch-16-training-record.pth'
         model = torch.load(model_path)
         model = model.eval()
         print(model)

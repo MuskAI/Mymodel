@@ -95,8 +95,6 @@ class Aspp(nn.Module):
         b1_ = self.b1(x)
         b2_ = self.b2(x)
         b3_ = self.b3(x)
-        print(b3_.shape)
-        print('the input x:', x.shape)
         # b4_ = self.b4(x)
         b4_ = self.b4(x)
         x = torch.cat([b4_, b0_, b1_, b2_, b3_], dim=1)

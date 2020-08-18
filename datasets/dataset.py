@@ -1,14 +1,14 @@
 import os
 import numpy as np
 from PIL import Image, ImageFilter
-from image_squeene import compress_image, get_size, MyGaussianBlur
+from .image_squeene import compress_image, get_size, MyGaussianBlur
 import random
 from sklearn.model_selection import train_test_split
 from PIL import ImageFile
 import traceback
 import cv2
 import sys
-from gen_8_map import gen_8_2_map as gen_8_map
+from .gen_8_map import gen_8_2_map as gen_8_map
 import torch
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import torchvision
@@ -534,11 +534,11 @@ class DataParser():
                 dou_em = np.expand_dims(dou_em, 2)
                 # dou_em = tran(dou_em)
                 double_edge.append(dou_em)
-
+                images.append(im)
                 # 1转化为tensor
 
 
-                filenames.append(self.X_train[index])
+                filenames.append(self.X_test[index])
 
 
 

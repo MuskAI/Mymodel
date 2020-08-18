@@ -3,7 +3,6 @@ import torch
 from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
 # loss function
 def sigmoid_cross_entropy_loss(prediction, label):
-    #print (label,label.max(),label.min())
     label = label.long()
     mask = (label != 0).float()
     num_positive = torch.sum(mask).float()
@@ -22,8 +21,8 @@ def cross_entropy_loss(prediction, label):
     num_positive = torch.sum(mask).float()
     num_negative = mask.numel() - num_positive
     #print (num_positive, num_negative)
-    mask[mask != 0] = num_negative / (num_positive + num_negative)
-    mask[mask == 0] = num_positive / (num_positive + num_negative)
+    mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
+    mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
     cost = torch.nn.functional.binary_cross_entropy(
             prediction.float(),label.float(), weight=mask, reduce=False)
     return torch.sum(cost)
@@ -76,8 +75,8 @@ def smooth_l1_loss(prediction, label):
     return torch.nn.SmoothL1Loss()(prediction,label)
 
 def CE_loss(prediction,label):
-    return torch.nn.CrossEntropyLoss()(prediction,label)
-
+    cost = torch.nn.functional.binary_cross_entropy(prediction,label)
+    return torch.sum(cost)
 
 
 def my_accuracy_score(prediction,label):
@@ -97,3 +96,6 @@ def my_precision_score(prediction,label):
 def my_f1_score(prediction,label):
     return f1_score(prediction,label)
 
+
+def BCE_loss(prediction,label):
+    torch.nn.BCELoss()
