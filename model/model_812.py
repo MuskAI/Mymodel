@@ -538,4 +538,4 @@ class Net(nn.Module):
 
 if __name__ == '__main__':
     model = Net()
-    summary(model.cuda(),(3,320,320))
+    summary(model,(3,320,320))

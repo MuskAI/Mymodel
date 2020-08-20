@@ -13,8 +13,10 @@ import torch
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import torchvision
 
+
 class DataParser():
     def __init__(self, batch_size_train):
+
 
         self.train_file = '/home/liu/chenhaoran/datasets/tamper_result'
         self.double_edge_file = '/home/liu/chenhaoran/datasets/ground_truth_result'

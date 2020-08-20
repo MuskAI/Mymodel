@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from functions import my_f1_score,my_accuracy_score,my_precision_score,weighted_cross_entropy_loss
+from functions import f1_score,acc_score,precision_score,weighted_cross_entropy_loss
 import conf.global_setting as settings
 #from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR
 from datasets.dataset import DataParser
@@ -35,7 +35,7 @@ parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=6, type=int, metavar='BT',
                     help='batch size')
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-4, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-6, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -71,7 +71,7 @@ TMP_DIR = join(THIS_DIR, args.tmp)
 if not isdir(TMP_DIR):
   os.makedirs(TMP_DIR)
 
-writer = SummaryWriter('runs/Aug18')
+writer = SummaryWriter('runs/Aug19')
 
 def generate_minibatches(dataParser, train=True):
     while True:
@@ -140,10 +140,33 @@ def train(model,optimizer,epoch,save_dir):
         optimizer.zero_grad()
         outputs = model(images)
         # 四张GT监督
-        show_outputs = np.array(outputs[0].cpu().detach())
-        show_labels = np.array(labels[0].cpu().detach())
+
+
+        if batch_index==1:
+            show_outputs = np.array(outputs[0].cpu().detach())*255
+            show_outputs = np.array(show_outputs,dtype='uint8')
+            show_outputs = Image.fromarray(show_outputs[0, 0, :, :]).convert('RGB')
+            show_outputs.save('./mid_output/output_epoch%d_batch_index%d.png'%(epoch,batch_index))
+
+            show_labels = np.array(labels[0].cpu().detach())*255
+            show_labels = np.array(show_labels,dtype='uint8')
+            show_labels = Image.fromarray(show_labels[0, 0, :, :]).convert('RGB')
+            show_labels.save('./mid_output/label_epoch%d_batch_index%d.png'%(epoch,batch_index))
+
+
+        if batch_index == 2000:
+            show_outputs = np.array(outputs[0].cpu().detach()) * 255
+            show_outputs = np.array(show_outputs, dtype='uint8')
+            show_outputs = Image.fromarray(show_outputs[0, 0, :, :]).convert('RGB')
+            show_outputs.save('./mid_output/output_epoch%d_batch_index%d.png' % (epoch, batch_index))
+
+            show_labels = np.array(labels[0].cpu().detach()) * 255
+            show_labels = np.array(show_labels, dtype='uint8')
+            show_labels = Image.fromarray(show_labels[0, 0, :, :]).convert('RGB')
+            show_labels.save('./mid_output/label_epoch%d_batch_index%d.png' % (epoch, batch_index))
+
         # plt.figure('ouput')
-        # plt.imshow(show_outputs[0,0,:,:])
+        # plt.imshow()
         # plt.show()
         # plt.figure('labels')
         # plt.imshow(show_labels[0, 0, :, :])
@@ -157,6 +180,8 @@ def train(model,optimizer,epoch,save_dir):
         for c_index,c in enumerate(outputs[1:]):
             loss = loss + cross_entropy_loss(c, labels[c_index+1])
         loss = loss/20
+
+
         loss.backward()
 
         # acc_scroe = my_accuracy_score(outputs[9].cpu().detach().numpy(),labels[-1].cpu().detach().numpy())
@@ -197,7 +222,7 @@ def train(model,optimizer,epoch,save_dir):
     # save_checkpoint({'epoch': epoch,'state_dict':model.state_dict(), 'optimizer': optimizer.state_dict()},filename=join(save_dir,"epooch-%d-checkpoint.pth" %epoch))
 
 
-    return losses.avg,epoch_loss
+    return losses.avg   ,epoch_loss
 
 
 
@@ -268,9 +293,10 @@ def val(model,epoch):
 
 def main():
     # 模型可持续化
-    save_model_path = os.listdir('save_model/8-17/')
+    save_model_path = os.listdir('./record/')
     if save_model_path !=[]:
-        model = torch.load(save_model_path[-1])
+        model = torch.load('./record'+ '/'+'epoch-16-training-record.pth')
+        print('成功加载模型','./record'+ '/'+'epoch-16-training-record.pth')
     else:
         model = Net()
     #
@@ -280,7 +306,7 @@ def main():
         model.cuda()
     else:
         pass
-    model.apply(weights_init)
+    # odel.apply(weights_init)
 
     # if args.resume:
     #     if isfile(args.resume):
@@ -308,12 +334,14 @@ def main():
         tr_avg_loss, tr_detail_loss = train(model = model,optimizer = optimizer,epoch= epoch,save_dir=join(TMP_DIR, 'epoch-%d-training-record' % epoch))
         # val_avg_loss, val_detail_loss = val(model=model,epoch=epoch)
         writer.add_scalar('tr_avg_loss', tr_avg_loss, global_step=epoch)
+        writer.add_scalar('lr', scheduler.get_lr(), global_step=epoch)
         # writer.add_scalar('val_avg_loss', val_avg_loss, global_step=epoch)
         # log.flush()
         # Save checkpoint
         save_file = os.path.join(TMP_DIR, 'checkpoint_epoch{}.pth'.format(epoch))
         # save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()})
         scheduler.step()
+
         train_loss.append(tr_avg_loss)
         train_loss_detail += tr_detail_loss
 

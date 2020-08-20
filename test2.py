@@ -37,7 +37,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import cv2 as cv
-from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss
+from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss,wce_huber_loss
 from utils import Logger, Averagvalue, save_checkpoint, load_vgg16pretrain
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
@@ -46,8 +46,18 @@ def read_test_data():
         image_name = os.listdir(test_data_path)
         for name in image_name:
             print(image_name)
+            name = 'Default_139_168593_refrigerator.png'
+            gt_name = name.replace('Default','Gt')
+            gt_name = gt_name.replace('png','bmp')
+            gt_name = gt_name.replace('jpg','bmp')
+            gt = Image.open(gt_name)
+            gt = np.array(gt)
+            plt.figure('gt')
+            plt.imshow(gt)
+            plt.show()
+
             image_path = os.path.join(test_data_path,name)
-            img = Image.open(image_path)
+            img = Image.open('Default_139_168593_refrigerator.png')
             img = np.array(img,dtype='float32')
             R_MEAN = img[:,:,0].mean()
             G_MEAN = img[:,:,1].mean()
@@ -64,9 +74,25 @@ def read_test_data():
             output = model(img)
             output = output[0]
 
-            output = np.array(output.cpu().detach().numpy(),dtype='float32')
+
+            gt = np.array(gt,dtype='float32')
+            gt = gt[np.newaxis, :, :]
+
+            gt = gt[np.newaxis, :, :, :]
+            gt = torch.from_numpy(gt).cuda()
+
+            loss = wce_huber_loss(output, gt)
+            print(loss)
+            output = np.array(output.cpu().detach().numpy(), dtype='float32')
             output = output.squeeze(0)
+
+
+
             output = np.transpose(output,(1,2,0))
+            output_ = output.squeeze(2)
+            plt.figure('prediction')
+            plt.imshow(output)
+            plt.show()
             output = np.array(output)*255
             output = np.asarray(output,dtype='uint8')
             # output_img = Image.fromarray(output)
@@ -81,9 +107,9 @@ def read_test_data():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/home/liu/chenhaoran/8-10测试结果实验/实验数据准备/生成数据test/cm'
-        output_path = 'test_record/test_820_3/'
-        model_path = './record2/epoch-16-training-record.pth'
+        test_data_path = '/home/liu/chenhaoran/Mymodel/tes_820/tes_820'
+        output_path = 'test_record/test_820/'
+        model_path = './record/epoch-1-training-record.pth'
         model = torch.load(model_path)
         model = model.eval()
         print(model)

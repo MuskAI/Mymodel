@@ -29,7 +29,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
 from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss,CE_loss,smooth_l1_loss
-from utils import Logger, Averagvalue, save_checkpoint, load_vgg16pretrain
+from utils import Logger, Averagvalue, save_checkpoint, load_vgg16pretrain,weights_init
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
@@ -57,22 +57,25 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 50)')
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
+parser.add_argument('--resume', default=False, type=bool, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
+parser.add_argument('--mid_result_root',type=str, help='mid_result_root', default='./mid_result_820')
+parser.add_argument('--model_save_dir',type=str, help='model_save_dir', default='')
 # ================ dataset
-parser.add_argument('--dataset', help='root folder of dataset', default='data/HED-BSDS')
+parser.add_argument('--dataset', help='root folder of dataset', default='dta/HED-BSD')
 args = parser.parse_args()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
-THIS_DIR = abspath(dirname(__file__))
-TMP_DIR = join(THIS_DIR, args.tmp)
-if not isdir(TMP_DIR):
-  os.makedirs(TMP_DIR)
+model_save_dir = abspath(dirname(__file__))
+model_save_dir = join(model_save_dir, args.model_save_dir)
+if not isdir(model_save_dir):
+  os.makedirs(model_save_dir)
 
-writer = SummaryWriter('runs/Aug20_1')
+# tensorboard 使用
+writer = SummaryWriter('runs/'+'%d-%d_tensorboard'%(datetime.datetime.now().month,datetime.datetime.now().day))
 
 def generate_minibatches(dataParser, train=True):
     while True:
@@ -140,67 +143,28 @@ def train(model,optimizer,epoch,save_dir):
 
         optimizer.zero_grad()
         outputs = model(images)
-        # 四张GT监督
+        # 这里放保存中间结果的代码
+        if batch_index in [0,1000,2000,3000]:
+            save_mid_result(outputs[0],labels[0],epoch,batch_index,args.mid_result_root)
 
 
-        if batch_index==1:
-            show_outputs = np.array(outputs[0].cpu().detach())*255
-            show_outputs = np.array(show_outputs,dtype='uint8')
-            show_outputs = Image.fromarray(show_outputs[0, 0, :, :]).convert('RGB')
-            show_outputs.save('./mid_output/output_epoch%d_batch_index%d.png'%(epoch,batch_index))
-
-            show_labels = np.array(labels[0].cpu().detach())*255
-            show_labels = np.array(show_labels,dtype='uint8')
-            show_labels = Image.fromarray(show_labels[0, 0, :, :]).convert('RGB')
-            show_labels.save('./mid_output/label_epoch%d_batch_index%d.png'%(epoch,batch_index))
-
-
-        if batch_index == 2000:
-            show_outputs = np.array(outputs[0].cpu().detach()) * 255
-            show_outputs = np.array(show_outputs, dtype='uint8')
-            show_outputs = Image.fromarray(show_outputs[0, 0, :, :]).convert('RGB')
-            show_outputs.save('./mid_output/output_epoch%d_batch_index%d.png' % (epoch, batch_index))
-
-            show_labels = np.array(labels[0].cpu().detach()) * 255
-            show_labels = np.array(show_labels, dtype='uint8')
-            show_labels = Image.fromarray(show_labels[0, 0, :, :]).convert('RGB')
-            show_labels.save('./mid_output/label_epoch%d_batch_index%d.png' % (epoch, batch_index))
-
-        # plt.figure('ouput')
-        # plt.imshow()
-        # plt.show()
-        # plt.figure('labels')
-        # plt.imshow(show_labels[0, 0, :, :])
-        # plt.show()
         loss =wce_huber_loss(outputs[0],labels[0])*12
-        # for o in outputs[9:]: # o2 o3 o4
-        #     t_loss = cross_entropy_loss(o, labels[-1])
-        #     loss = loss +t_loss
-        # counter +=1
 
         for c_index,c in enumerate(outputs[1:]):
             loss = loss + wce_huber_loss_8(c, labels[c_index+1])
         loss = loss/20
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+        # 评价指标
         f1score = my_f1_score(outputs[0],labels[0])
         precisionscore = my_precision_score(outputs[0],labels[0])
         accscore = my_acc_score(outputs[0],labels[0])
-        writer.add_scalar('f1score',f1score,global_step=epoch*batch_index+batch_index)
-        writer.add_scalar('precisionscore', precisionscore, global_step=epoch * batch_index + batch_index)
-        writer.add_scalar('accscore', accscore, global_step=epoch * batch_index + batch_index)
+        writer.add_scalar('f1score',f1score,global_step=epoch*dataParser.steps_per_epoch+batch_index)
+        writer.add_scalar('precisionscore', precisionscore, global_step=epoch * dataParser.steps_per_epoch + batch_index)
+        writer.add_scalar('accscore', accscore, global_step=epoch * dataParser.steps_per_epoch + batch_index)
 
-        loss.backward()
 
-        # acc_scroe = my_accuracy_score(outputs[9].cpu().detach().numpy(),labels[-1].cpu().detach().numpy())
-        # print('the acc is :',acc_scroe)
-
-        # 下面应该是用来解决batch size 过下的问题
-        # if counter == args.itersize:
-        #     optimizer.step()
-        #     optimizer.zero_grad()
-        #     counter = 0
-
-        optimizer.step()
-        optimizer.zero_grad()
 
         # measure the accuracy and record loss
         losses.update(loss.item(),images.size(0))
@@ -208,20 +172,24 @@ def train(model,optimizer,epoch,save_dir):
         batch_time.update(time.time()-end)
         end = time.time()
 
-        # display and logging
-        if not isdir(save_dir):
-            os.makedirs(save_dir)
+
         if batch_index % 5 ==0:
             info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.steps_per_epoch) + \
                    'Time {batch_time.val:.3f} (avg:{batch_time.avg:.3f}) '.format(batch_time=batch_time) + \
-                   'Loss {loss.val:f} (avg:{loss.avg:f}) '.format(
-                       loss=losses)+ 'f1_score : %.4f'%f1score +'precisionscore: %.4f'%precisionscore+'acc_score %.4f'%accscore
+                   'Loss {loss.val:f} (avg:{loss.avg:f}) '.format(loss=losses)+\
+                   'f1_score : %.4f '%f1score +\
+                   'precision_score: %.4f '%precisionscore+\
+                   'acc_score %.4f '%accscore
 
             print(info)
-        writer.add_scalar('tr_avg_loss2', losses.val, global_step=epoch * batch_index + batch_index)
+        writer.add_scalar('tr_avg_loss2', losses.val, global_step=epoch * dataParser.steps_per_epoch + batch_index)
         if batch_index == dataParser.steps_per_epoch:
             break
-
+    save_checkpoint({
+        'epoch': epoch,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }, filename=save_dir)
 
     return losses.avg,epoch_loss
 
@@ -294,36 +262,23 @@ def val(model,epoch):
 
 def main():
     # 模型可持续化
-    save_model_path = os.listdir('./record/')
-    if save_model_path !=[]:
-        model = torch.load('./record'+ '/'+'epoch-6-training-record.pth')
-        print('成功加载模型','./record'+ '/'+'epoch-6-training-record.pth')
+    if args.resume:
+        save_model_path = os.listdir('./record/')
+        if save_model_path !=[]:
+            model = torch.load('./record'+ '/'+'epoch-6-training-record.pth')
+            print('成功加载模型','./record'+ '/'+'epoch-6-training-record.pth')
     else:
         model = Net()
-    #
-    # 模型可视化
+        model.apply(weights_init)
 
     if torch.cuda.is_available():
         model.cuda()
     else:
-        pass
-    # odel.apply(weights_init)
-
-    # if args.resume:
-    #     if isfile(args.resume):
-    #         print("=> loading checkpoint '{}'".format(args.resume))
-    #         checkpoint = torch.load(args.resume)
-    #         model.load_state_dict(checkpoint['state_dict'])
-    #         print("=> loaded checkpoint '{}'"
-    #               .format(args.resume))
-    #     else:
-    #         print("=> no checkpoint found at '{}'".format(args.resume))
+        model.cpu()
 
     optimizer = optim.Adam(model.parameters(), lr=args.lr,betas=(0.9,0.999),eps=1e-8)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
-    log = Logger(join(TMP_DIR, '%s-%d-log.txt' % ('Adam', args.lr)))
-    sys.stdout = log
     train_loss = []
     train_loss_detail = []
 
@@ -332,9 +287,7 @@ def main():
             print("Performing initial testing...")
             # 暂时空着
 
-        tr_avg_loss, tr_detail_loss = train(model = model,optimizer = optimizer,epoch= epoch,save_dir=join(TMP_DIR, 'epoch-%d-training-record' % epoch))
-        # 每一轮保存一次参数
-        # save_checkpoint({'epoch': epoch,'state_dict':model.state_dict(), 'optimizer': optimizer.state_dict()},filename=join(save_dir,"epooch-%d-checkpoint.pth" %epoch))
+        tr_avg_loss, tr_detail_loss = train(model = model,optimizer = optimizer,epoch= epoch,save_dir=join(args.model_save_dir, 'epoch-%d-training-record' % epoch))
 
         # val_avg_loss, val_detail_loss = val(model=model,epoch=epoch)
         writer.add_scalar('tr_avg_loss', tr_avg_loss, global_step=epoch)
@@ -342,19 +295,62 @@ def main():
         # writer.add_scalar('val_avg_loss', val_avg_loss, global_step=epoch)
         # log.flush()
         # Save checkpoint
-        save_file = os.path.join(TMP_DIR, 'checkpoint_epoch{}.pth'.format(epoch))
-        # save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()})
+        save_file = os.path.join(args.model_save_dir, 'checkpoint_epoch{}.pth'.format(epoch))
+        save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()},filename=save_file)
         scheduler.step()
 
         train_loss.append(tr_avg_loss)
         train_loss_detail += tr_detail_loss
 
-def weights_init(m):
-    if isinstance(m, nn.Conv2d):
-        # xavier(m.weight.data)
-        m.weight.data.normal_(0, 0.01)
-        if m.bias is not None:
-            m.bias.data.zero_()
+def save_mid_result(mid_output,label,epoch,batch_index,mid_save_root='./mid_result_820'):
+    """
+    输入一个batch的gpu tensor,保存中间结果
+    :param mid_output:
+    :return:
+    """
+    if mid_save_root == '':
+        print('mid_save_root为空')
+        sys.exit()
+
+    if os.path.exists(mid_save_root) == False:
+        print('中间结果根目录不存在，正在创建')
+        os.mkdir(mid_save_root)
+    else:
+        pass
+
+
+    dir_name = 'mid_result_epoch:%d'%(epoch)
+    dir_path = os.path.join(mid_save_root,dir_name)
+    mid_output_dir = os.path.join(dir_path, 'mid_output')
+    mid_label_dir = os.path.join(dir_path, 'mid_label')
+    if os.path.exists(dir_path) ==False:
+        os.mkdir(dir_path)
+        os.mkdir(mid_output_dir)
+        os.mkdir(mid_label_dir)
+        print(dir_path)
+        print(mid_label_dir)
+        print(mid_output_dir)
+        print('创建目录成功！！！！！')
+    else:
+        print(dir_path,'已经存在')
+
+
+    for index in range(len(mid_output)):
+        file_name_output = 'mid_output_epoch%d_batch_index%d@%d.png' % (epoch, batch_index, index)
+        file_output_dir = os.path.join(mid_output_dir,file_name_output)
+        file_name_label = 'mid_label_epoch%d_batch_index%d@%d.png' % (epoch, batch_index, index)
+        file_label_dir = os.path.join(mid_label_dir,file_name_label)
+
+        show_outputs = np.array(mid_output[index].cpu().detach()) * 255
+        show_outputs = np.array(show_outputs, dtype='uint8')
+        show_outputs = Image.fromarray(show_outputs[0, 0, :, :]).convert('RGB')
+        show_outputs.save(file_output_dir)
+
+        show_labels = np.array(label[index].cpu().detach()) * 255
+        show_labels = np.array(show_labels, dtype='uint8')
+        show_labels = Image.fromarray(show_labels[0, 0, :, :]).convert('RGB')
+        show_labels.save(file_label_dir)
+
 
 if __name__ == '__main__':
     main()

@@ -75,13 +75,13 @@ parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=2, type=int, metavar='BT',
                     help='batch size')
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-6, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-4, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--wd', default=2e-4, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=3, type=int,
+parser.add_argument('--stepsize', default=10, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -257,7 +257,7 @@ def main():
     # dataParser = DataParser(batch_size)
     loss_function = nn.L1Loss()
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
-    # train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,milestones=settings.MILESTONES,gamma=0.2)#learning rate decay
+
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
     log = Logger(join(TMP_DIR, '%s-%d-log.txt' % ('Adam', args.lr)))

@@ -1,7 +1,11 @@
 import numpy as np
 import torch
 from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score
 # loss function
+
 def sigmoid_cross_entropy_loss(prediction, label):
     label = label.long()
     mask = (label != 0).float()
@@ -25,7 +29,7 @@ def cross_entropy_loss(prediction, label):
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
     cost = torch.nn.functional.binary_cross_entropy(
             prediction.float(),label.float(), weight=mask, reduce=False)
-    return torch.sum(cost)
+    return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
 
 def weighted_nll_loss(prediction, label):
     label = torch.squeeze(label.long(), dim=0)
@@ -38,7 +42,7 @@ def weighted_nll_loss(prediction, label):
     mask[mask != 0] = num_negative / (num_positive + num_negative)
     mask[mask == 0] = num_positive / (num_positive + num_negative)
     cost = torch.mul(cost, mask)
-    return torch.sum(cost)
+    return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
 
 def weighted_cross_entropy_loss(prediction, label, output_mask=False):
     criterion = torch.nn.CrossEntropyLoss(reduce=False)
@@ -90,12 +94,45 @@ def my_accuracy_score(prediction,label):
         acc += accuracy_score(prediction[i,:,:],label[i,:,:])
     return acc
 
-def my_precision_score(prediction,label):
-    return precision_score(prediction,label)
 
-def my_f1_score(prediction,label):
-    return f1_score(prediction,label)
 
 
 def BCE_loss(prediction,label):
-    torch.nn.BCELoss()
+    loss1 = cross_entropy_loss(prediction,label)
+
+
+
+def wce_huber_loss(prediction,label):
+    loss1 = cross_entropy_loss(prediction,label)
+    loss2 = smooth_l1_loss(prediction,label)
+    loss3 = l1_loss(prediction,label)
+    return 0.6*loss1+0.35*loss2+0.05*loss3
+
+def wce_huber_loss_8(prediction,label):
+    loss1 = cross_entropy_loss(prediction,label)
+    loss2 = smooth_l1_loss(prediction,label)
+    return 0.6*loss1+0.4*loss2
+def my_precision_score(prediction,label):
+    y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
+    l = label.reshape(label.size()[0] * label.size()[1] * label.size()[2] * label.size()[3])
+    y = np.array(y.cpu().detach())
+    y = np.where(y > 0.5, 1, 0)
+    l = np.array(l.cpu().detach())
+    return precision_score(y, l,average='micro')
+
+def my_acc_score(prediction,label):
+    y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
+    l = label.reshape(label.size()[0] * label.size()[1] * label.size()[2] * label.size()[3])
+    y = np.array(y.cpu().detach())
+    y = np.where(y > 0.5, 1, 0)
+    l = np.array(l.cpu().detach())
+    return accuracy_score(y,l)
+
+def my_f1_score(prediction,label):
+    y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
+    l = label.reshape(label.size()[0] * label.size()[1] * label.size()[2] * label.size()[3])
+
+    y = np.array(y.cpu().detach())
+    y = np.where(y > 0.5, 1, 0).astype('int')
+    l = np.array(l.cpu().detach()).astype('int')
+    return f1_score(y,l,average='micro')
