@@ -38,6 +38,7 @@ class DataParser():
         self.double_edge_list =[]
         for item in self.train_list:
             temp = item.replace('Default', 'Gt')
+            temp = temp.replace('poisson','Gt')
             temp = temp.replace('png','bmp')
             temp = temp.replace('jpg', 'bmp')
             self.double_edge_list.append(temp)
@@ -51,40 +52,13 @@ class DataParser():
         self.dou_edge_list = []
         self.final_dou_edge_list = []
 
-        # random.shuffle(self.train_list)
-        # random.shuffle(self.double_edge_list)
-        # for edge_image in self.edge_list:
-        #     # 在这个地方可以进行真实数据和合成数据的分离
-        #     edge_image_split = edge_image.split('.')
-        #     for train_image in self.train_list:
-        #         # index = self.train_list.index(train_image)
-        #         train_image_spilt = train_image.split('.')
-        #         if edge_image_split[-2] == train_image_spilt[-2]:
-        #             # print(train_image_spilt)
-        #             # print(edge_image_split)
-        #             self.trainimage_list.append(train_image)
-        #             # self.dou_edge_list.append(edge_image)
-        #             break
-
-        # print(len(self.train_list))
-        # for i in range(len(self.train_list)):
-        #     print(i)
-        #     filename1 = os.path.join(self.train_file, self.trainimage_list[i])
-        #     # filename2 = os.path.join(self.edge_file, self.edge_list[i])
-        #     filename3 = os.path.join(self.double_edge_file,self.dou_edge_list[i])
-        #     self.train_image_list.append(filename1)
-        #     # self.gt_list.append(filename2)
-        #     self.final_dou_edge_list.append(filename3)
-        # self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(self.train_image_list, self.gt_list,
-        #                                                                         test_size=0.1, train_size=0.9,
-        #                                                                         random_state=1300)
-
         for i in range(len(self.train_list)):
             train_filename = os.path.join(self.train_file, self.train_list[i])
             gt_filename = os.path.join(self.double_edge_file,self.double_edge_list[i])
 
             t1 = self.train_list[i]
             t1 = t1.replace('Default','')
+            t1 = t1.replace('poisson','')
             t1 = t1.replace('png','')
             t1 = t1.replace('jpg','')
             t1 = t1.replace('bmp','')

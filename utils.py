@@ -1,20 +1,8 @@
 import os, sys
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.models as models
-import torch.autograd.variable as Variable
 import numpy as np
-import scipy.io as sio
-from os.path import join as pjoin
-#from skimage.transform import resize
-#from models import HiFi1Edge
-import skimage.io as io
-import time
-import skimage
-import warnings
 from PIL import Image
-
 class Logger(object):
   def __init__(self, fpath=None):
     self.console = sys.stdout
@@ -86,72 +74,6 @@ def load_pretrained(model, fname, optimizer=None):
     else:
         print("=> no checkpoint found at '{}'".format(fname))
 
-def load_vgg16pretrain(model, vggmodel='vgg16convs.mat'):
-    vgg16 = sio.loadmat(vggmodel)
-    torch_params =  model.state_dict()
-    for k in vgg16.keys():
-        name_par = k.split('-')
-        size = len(name_par)
-        if size  == 2:
-            name_space = name_par[0] + '.' + name_par[1]
-            data = np.squeeze(vgg16[k])
-            torch_params[name_space] = torch.from_numpy(data)
-    model.load_state_dict(torch_params)
-
-def load_fsds_caffe(model, fsdsmodel='caffe-fsds.mat'):
-    fsds = sio.loadmat(fsdsmodel)
-    torch_params =  model.state_dict()
-    for k in fsds.keys():
-        name_par = k.split('-')
-        #print (name_par)
-        size = len(name_par)
-
-        data = np.squeeze(fsds[k])
-
-
-        if 'upsample' in name_par:
-           # print('skip upsample')
-            continue
-
-
-        if size  == 2:
-            name_space = name_par[0] + '.' + name_par[1]
-            data = np.squeeze(fsds[k])
-            if data.ndim==2:
-                data = np.reshape(data, (data.shape[0], data.shape[1]))
-
-            torch_params[name_space] = torch.from_numpy(data)
-
-        if size  == 3:
-           # if 'bias' in name_par:
-            #    continue
-
-            name_space = name_par[0] + '_' + name_par[1]+ '.' + name_par[2]
-            data = np.squeeze(fsds[k])
-           # print(data.shape)
-            if data.ndim==2:
-               # print (data.shape[0])
-                data = np.reshape(data,(data.shape[0], data.shape[1]))
-            if data.ndim==1 :
-                data = np.reshape(data, (1, len(data), 1, 1))
-            if data.ndim==0:
-                data = np.reshape(data, (1))
-
-            torch_params[name_space] = torch.from_numpy(data)
-
-        if size == 4:
-           # if 'bias' in name_par:
-            #    continue
-            data = np.squeeze(fsds[k])
-            name_space = name_par[0] + '_' + name_par[1] + name_par[2] + '.' + name_par[3]
-            if data.ndim==2:
-                data = np.reshape(data,(data.shape[0], data.shape[1], 1, 1))
-
-            torch_params[name_space] = torch.from_numpy(data)
-
-    model.load_state_dict(torch_params)
-    print('loaded')
-
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
@@ -161,3 +83,84 @@ def weights_init(m):
             torch.nn.init.constant_(m.weight, 0.25)
         if m.bias is not None:
             m.bias.data.zero_()
+
+def save_mid_result(mid_output, label, epoch, batch_index, mid_save_root='./mid_result_820',train_phase=True,save_8map=False):
+    """
+    输入的是网络直接输出的结果，一个list
+    label也是一个list
+    分为train阶段的中间结果
+    和val阶段的中间结果
+    :param mid_output:
+    :return:
+    """
+    if mid_save_root == '':
+        print('mid_save_root为空')
+        sys.exit()
+
+    # 训练阶段、验证阶段分开处理
+    if train_phase:
+        mid_save_root = mid_save_root+'_train'
+    else:
+        mid_save_root = mid_save_root + '_val'
+
+
+    if os.path.exists(mid_save_root) == False:
+        print('中间结果根目录不存在，正在创建')
+        os.mkdir(mid_save_root)
+    else:
+        pass
+
+    dir_name = 'mid_result_epoch_%d' % (epoch)
+    dir_path = os.path.join(mid_save_root, dir_name)
+    mid_output_dir = os.path.join(dir_path, 'mid_output')
+    mid_label_dir = os.path.join(dir_path, 'mid_label')
+    mid_8_map_dir = os.path.join(dir_path, 'mid_8_map')
+    if os.path.exists(dir_path) == False:
+        os.mkdir(dir_path)
+        os.mkdir(mid_output_dir)
+        os.mkdir(mid_label_dir)
+        os.mkdir(mid_8_map_dir)
+        print(dir_path)
+        print(mid_label_dir)
+        print(mid_output_dir)
+        print(mid_8_map_dir)
+        print('创建目录成功！！！！！')
+    else:
+        print(dir_path, '已经存在')
+
+    # 每一个list 里面有一个pred 和 8张图 每一个又是N个batch_size
+    # 先遍历list区分pred 和 8张图
+    # 然后对每一个进行batch遍历保存每一张图
+    # 命名应该在内层得到
+    for index in range(len(mid_output)):
+        if index == 0:
+
+            show_outputs = np.array(mid_output[index].cpu().detach()) * 255
+            show_outputs = np.array(show_outputs, dtype='uint8')
+            show_labels = np.array(label[index].cpu().detach()) * 255
+            show_labels = np.array(show_labels, dtype='uint8')
+            for i in range(show_outputs.size(0)):
+                file_name_output = 'mid_output_epoch%d_batch_index%d@%d.png' % (epoch, batch_index, i)
+                file_output_dir = os.path.join(mid_output_dir, file_name_output)
+                file_name_label = 'mid_label_epoch%d_batch_index%d@%d.png' % (epoch, batch_index, i)
+                file_label_dir = os.path.join(mid_label_dir, file_name_label)
+
+                show_outputs = Image.fromarray(show_outputs[i, 0, :, :]).convert('RGB')
+                show_outputs.save(file_output_dir)
+
+                show_labels = Image.fromarray(show_labels[i, 0, :, :]).convert('RGB')
+                show_labels.save(file_label_dir)
+        else:
+            if save_8map:
+                show_8map = np.array(mid_output[index].cpu().detach()) * 255
+                show_8map = np.array(mid_output, dtype='uint8')
+                for i in range(show_8map.size(0)):
+                    file_name_8map = 'mid_8map_epoch%d_batch_index%d@No%d-%d.png' % (epoch, batch_index,index,i)
+                    file_8map_dir = os.path.join(mid_label_dir, file_name_8map)
+                    show_8map = show_8map.transpose((0,2,3,1))
+                    show_8map = Image.fromarray(show_8map[i, :, :, :]).convert('RGB')
+                    show_8map.save(file_8map_dir)
+            else:
+                # print('不保存')
+                break
+
