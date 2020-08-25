@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from functions import my_f1_score,my_accuracy_score,my_precision_score
+
 import conf.global_setting as settings
 #from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR
 from datasets.dataset import DataParser
@@ -38,7 +38,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import cv2 as cv
 from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss
-from utils import Logger, Averagvalue, save_checkpoint, load_vgg16pretrain
+
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
 def read_test_data():
@@ -81,9 +81,9 @@ def read_test_data():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/home/liu/chenhaoran/8-10测试结果实验/实验数据准备/生成数据test/cm'
+        test_data_path = '/home/liu/chenhaoran/Mymodel_wkl/datasets/tes_820'
         output_path = 'test_record/test_820_3/'
-        model_path = './record2/epoch-16-training-record.pth'
+        model_path = './record821/record2/epoch-16-training-record.pth'
         model = torch.load(model_path)
         model = model.eval()
         print(model)

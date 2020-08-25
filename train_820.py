@@ -1,6 +1,6 @@
 import torch.optim as optim
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
-    wce_huber_loss_8
+    wce_huber_loss_8,my_recall_score
 import conf.global_setting as settings
 from datasets.dataset import DataParser
 from model.model_812 import Net
@@ -22,16 +22,16 @@ from utils import Logger, Averagvalue, save_checkpoint, weights_init, load_pretr
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=6, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=4, type=int, metavar='BT',
                     help='batch size')
 # =============== optimizer
 parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
-parser.add_argument('--weight_decay', '--wd', default=2e-2, type=float,
+parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=3, type=int,
+parser.add_argument('--stepsize', default=10, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -49,9 +49,10 @@ parser.add_argument('--gpu', default='0', type=str,
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
-parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result_820')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='')
-parser.add_argument('--mid_result_index',type=list,help='mid_result_index',default=[])
+parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result_823')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./record823')
+parser.add_argument('--mid_result_index',type=list,help='mid_result_index',default=[0])
+parser.add_argument('--per_epoch_freq',type=int,help='per_epoch_freq',default=50)
 # ================ dataset
 parser.add_argument('--dataset', help='root folder of dataset', default='dta/HED-BSD')
 args = parser.parse_args()
@@ -104,17 +105,27 @@ def generate_minibatches(dataParser, train=True):
 def train(model, optimizer, epoch, save_dir):
     # 读取数据的迭代器
     dataParser = DataParser(args.batch_size)
+    train_epoch = int(dataParser.steps_per_epoch)
 
-    #
+    # 变量保存
     batch_time = Averagvalue()
     data_time = Averagvalue()
     losses = Averagvalue()
+    fuse_loss =Averagvalue
+    f1_value = Averagvalue()
+    acc_value = Averagvalue()
+    recall_value = Averagvalue()
+    precision_value = Averagvalue()
+    map8_loss_value  =Averagvalue()
+    loss_8 = Averagvalue()
+    ###############################
+
+
 
     # switch to train mode
     model.train()
     end = time.time()
     epoch_loss = []
-    counter = 0
 
     for batch_index, (images, labels_numpy) in enumerate(generate_minibatches(dataParser, True)):
 
@@ -134,26 +145,33 @@ def train(model, optimizer, epoch, save_dir):
 
         if torch.cuda.is_available():
             loss = torch.zeros(1).cuda()
+            loss_8t = torch.zeros(()).cuda()
         else:
             loss = torch.zeros(1)
+            loss_8t = torch.zeros(())
 
         # 输出结果[img，8张图]
         outputs = model(images)
 
         # 这里放保存中间结果的代码
         if batch_index in args.mid_result_index:
-            save_mid_result(outputs[0], labels, epoch, batch_index, args.mid_result_root,save_8map=True,train_phase=True)
+            save_mid_result(outputs, labels, epoch, batch_index, args.mid_result_root,save_8map=True,train_phase=True)
 
         # 建立loss
         loss = wce_huber_loss(outputs[0], labels[0]) * 12
+        writer.add_scalar('fuse_loss_per_epoch',loss.item()/12,global_step = epoch * train_epoch + batch_index)
         for c_index, c in enumerate(outputs[1:]):
-            loss = loss + wce_huber_loss_8(c, labels[c_index + 1])
+            one_loss_t = wce_huber_loss_8(c, labels[c_index + 1])
+            loss_8t += one_loss_t
+            writer.add_scalar('%d_map_loss'%(c_index),one_loss_t.item(),global_step=train_epoch)
+        loss += loss_8t
         loss = loss / 20
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
         # measure the accuracy and record loss
-        losses.update(loss.item(), images.size(0))
+        losses.update(loss.item())
+        map8_loss_value.update(loss_8t.item())
         epoch_loss.append(loss.item())
         batch_time.update(time.time() - end)
         end = time.time()
@@ -162,10 +180,15 @@ def train(model, optimizer, epoch, save_dir):
         f1score = my_f1_score(outputs[0], labels[0])
         precisionscore = my_precision_score(outputs[0], labels[0])
         accscore = my_acc_score(outputs[0], labels[0])
-        writer.add_scalar('f1score', f1score, global_step=epoch * dataParser.steps_per_epoch + batch_index)
-        writer.add_scalar('precisionscore', precisionscore,
-                          global_step=epoch * dataParser.steps_per_epoch + batch_index)
-        writer.add_scalar('accscore', accscore, global_step=epoch * dataParser.steps_per_epoch + batch_index)
+        recallscore =my_recall_score(outputs[0],labels[0])
+        ################################
+
+
+        f1_value.update(f1score)
+        precision_value.update(precisionscore)
+        acc_value.update(accscore)
+        recall_value.update(recallscore)
+
 
 
 
@@ -173,14 +196,25 @@ def train(model, optimizer, epoch, save_dir):
             info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.steps_per_epoch) + \
                    'Time {batch_time.val:.3f} (avg:{batch_time.avg:.3f}) '.format(batch_time=batch_time) + \
                    'Loss {loss.val:f} (avg:{loss.avg:f}) '.format(loss=losses) + \
-                   'f1_score : %.4f ' % f1score + \
-                   'precision_score: %.4f ' % precisionscore + \
-                   'acc_score %.4f ' % accscore
+                   'f1_score {f1.val:f} (avg:{f1.avg:f}) '.format(f1=f1_value) + \
+                   'precision_score: {precision.val:f} (avg:{precision.avg:f}) '.format(precision=precision_value) + \
+                   'acc_score {acc.val:f} (avg:{acc.avg:f})'.format(acc=acc_value) +\
+                   'recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value)
 
             print(info)
-        writer.add_scalar('tr_avg_loss2', losses.val, global_step=epoch * dataParser.steps_per_epoch + batch_index)
-        if batch_index == dataParser.steps_per_epoch:
+
+        # 对于每一个epoch内按照一定的频率保存评价指标，以观察震荡情况
+        if batch_index % args.per_epoch_freq == 0:
+            writer.add_scalar('tr_loss_per_epoch', losses.val, global_step=epoch * train_epoch + batch_index)
+            writer.add_scalar('f1_score_per_epoch', f1score, global_step=epoch * train_epoch + batch_index)
+            writer.add_scalar('precision_score_per_epoch', precisionscore,
+                              global_step=epoch * train_epoch + batch_index)
+            writer.add_scalar('acc_score_per_epoch', accscore, global_step=epoch * train_epoch + batch_index)
+            writer.add_scalar('recall_score_per_epoch',recallscore,global_step=epoch * train_epoch + batch_index)
+
+        if batch_index >= train_epoch:
             break
+
     save_checkpoint({
         'epoch': epoch,
         'state_dict': model.state_dict(),
@@ -194,7 +228,6 @@ def val(model, epoch):
     torch.cuda.empty_cache()
     # 读取数据的迭代器
     dataParser = DataParser(args.batch_size)
-
     #
     batch_time = Averagvalue()
     data_time = Averagvalue()
@@ -259,8 +292,8 @@ def val(model, epoch):
                    'acc_score %.4f ' % accscore
 
             print('val: ',info)
-        writer.add_scalar('val_avg_loss2', losses.val, global_step=epoch * dataParser.steps_per_epoch + batch_index)
-        if batch_index == dataParser.val_steps//10:
+        writer.add_scalar('val_avg_loss2', losses.val, global_step=epoch * (dataParser.val_steps//100) + batch_index)
+        if batch_index > dataParser.val_steps//1:
             break
 
     return losses.avg, epoch_loss
@@ -286,16 +319,19 @@ def main():
             model.load_state_dict(checkpoint['state_dict'])
             print("=> loaded checkpoint '{}'"
                   .format(args.resume))
-            optimizer = optim.SGD(lr=args.lr, momentum=args.momentum, weight_decay=args.weight_dacay)
+            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
+                                  weight_decay=args.weight_decay)
             optimizer.load_state_dict(checkpoint['optimizer'])
 
         else:
-            optimizer = optim.SGD(lr=args.lr, momentum=args.momentum, weight_decay=args.weight_dacay)
+            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
+                                  weight_decay=args.weight_decay)
             print("=> no checkpoint found at '{}'".format(args.resume))
 
 
     else:
-        model = Net()
+        optimizer = optim.SGD(model.parameters(),lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+        print("=> no checkpoint found at '{}'".format(args.resume))
 
     # 优化器
     # optimizer = optim.Adam(model.parameters(), lr=args.lr,betas=(0.9,0.999),eps=1e-8)
@@ -303,14 +339,12 @@ def main():
 
     for epoch in range(args.start_epoch, args.maxepoch):
         tr_avg_loss, tr_detail_loss = train(model=model, optimizer=optimizer, epoch=epoch,
-                                            save_dir=join(args.model_save_dir, 'epoch-%d-training-record-%d_%d'
-                                                          % (epoch, datetime.datetime.now().month,
-                                                             datetime.datetime.now().day)))
+                                            save_dir=args.model_save_dir)
 
-        val_avg_loss, val_detail_loss = val(model=model, epoch=epoch)
+       # val_avg_loss, val_detail_loss = val(model=model, epoch=epoch)
         writer.add_scalar('tr_avg_loss_per_epoch', tr_avg_loss, global_step=epoch)
         writer.add_scalar('lr_per_epoch', scheduler.get_lr(), global_step=epoch)
-        writer.add_scalar('val_avg_loss_per_epoch', val_avg_loss, global_step=epoch)
+        #writer.add_scalar('val_avg_loss_per_epoch', val_avg_loss, global_step=epoch)
 
         # 保存模型
         save_file = os.path.join(args.model_save_dir, 'checkpoint_epoch{}.pth'.format(epoch))

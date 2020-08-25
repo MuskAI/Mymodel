@@ -18,12 +18,15 @@ class DataParser():
     def __init__(self, batch_size_train):
 
 
-        self.train_file = '/home/liu/chenhaoran/datasets/tamper_result'
-        self.double_edge_file = '/home/liu/chenhaoran/datasets/ground_truth_result'
-
-        #self.train_file = 'C:\\Users\\musk\\Desktop\\fix_bk\\tamper_result'
-        #self.double_edge_file = 'C:\\Users\\musk\\Desktop\\fix_bk\\ground_truth_result'
-
+        # self.train_file = '/home/liu/chenhaoran/datasets/tamper_result'
+        # self.double_edge_file = '/home/liu/chenhaoran/datasets/ground_truth_result'
+        test =False
+        if test:
+            self.train_file = '/home/liu/chenhaoran/New_data_to_debug/train_dataset_train_percent_0.80@8_21'
+            self.double_edge_file = '/home/liu/chenhaoran/New_data_to_debug/train_gt_train_percent_0.80@8_21'
+        else:
+            self.train_file = '/home/liu/chenhaoran/8_20_dataset_after_divide/train_dataset_train_percent_0.80@8_20'
+            self.double_edge_file = '/home/liu/chenhaoran/8_20_dataset_after_divide/train_gt_train_percent_0.80@8_20'
         # self.save_path0_1 = '/home/libiao/数据/6.1混合数据/e0_1'
         # self.save_path1_1 = '/home/libiao/数据/6.1混合数据/e1_1'
         # self.save_path01 = '/home/libiao/数据/6.1混合数据/e01'
@@ -267,9 +270,9 @@ class DataParser():
                 # im[..., 2] -= B
 
                 # R=118.98194217348079 G=127.4061956623793 B=138.00865419127499
-                im[..., 0] -= 138.008
-                im[..., 1] -= 127.406
-                im[..., 2] -= 118.982
+                im[..., 0] -= 120.509
+                im[..., 1] -= 111.349
+                im[..., 2] -= 99.560
 
                 dou_chanel = [0 for i in range(8)]
 
@@ -474,9 +477,9 @@ class DataParser():
                 # im[..., 2] -= B
 
                 # R=118.98194217348079 G=127.4061956623793 B=138.00865419127499
-                im[..., 0] -= 138.008
-                im[..., 1] -= 127.406
-                im[..., 2] -= 118.982
+                im[..., 0] -= 120.509
+                im[..., 1] -= 111.349
+                im[..., 2] -= 99.560
 
                 dou_chanel = [0 for i in range(8)]
 

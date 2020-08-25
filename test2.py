@@ -4,22 +4,7 @@ time 8-17
 """
 import traceback
 from model import model
-import os
-import sys
-import argparse
-import time
-from datetime import datetime
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from functions import my_f1_score,my_accuracy_score,my_precision_score
-import conf.global_setting as settings
-#from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR
-from datasets.dataset import DataParser
-from model.model import Net
-from conf.global_setting import batch_size
-import torchsummary as summary
+from model.model_812 import Net
 import os, sys
 import numpy as np
 from PIL import Image
@@ -28,36 +13,33 @@ import argparse
 import time
 import datetime
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.optim import lr_scheduler
-import torchvision
-import torchvision.transforms as transforms
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import cv2 as cv
 from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss,wce_huber_loss
-from utils import Logger, Averagvalue, save_checkpoint, load_vgg16pretrain
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
+from utils import to_none_class_map
 
 def read_test_data():
     try:
         image_name = os.listdir(test_data_path)
         for name in image_name:
             print(image_name)
-            name = 'Default_139_168593_refrigerator.png'
+            name = 'Default_78_398895_clock.png'
             gt_name = name.replace('Default','Gt')
             gt_name = gt_name.replace('png','bmp')
             gt_name = gt_name.replace('jpg','bmp')
             gt = Image.open(gt_name)
             gt = np.array(gt)
+            gt = to_none_class_map(gt)
             plt.figure('gt')
             plt.imshow(gt)
             plt.show()
 
             image_path = os.path.join(test_data_path,name)
-            img = Image.open('Default_139_168593_refrigerator.png')
+            img = Image.open('Default_78_398895_clock.png')
             img = np.array(img,dtype='float32')
             R_MEAN = img[:,:,0].mean()
             G_MEAN = img[:,:,1].mean()
@@ -107,13 +89,14 @@ def read_test_data():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/home/liu/chenhaoran/Mymodel/tes_820/tes_820'
-        output_path = 'test_record/test_820/'
-        model_path = './record/epoch-1-training-record.pth'
-        model = torch.load(model_path)
-        model = model.eval()
-        print(model)
-        model = model.cuda()
+        test_data_path = '/home/liu/chenhaoran/Mymodel_wkl/mid_result_821_val/mid_result_epoch_0/mid_label'
+        output_path = './'
+        model_path = '/home/liu/chenhaoran/Mymodel_wkl/record823/epoch-1-checkpoint.pth'
+        checkpoint = torch.load(model_path)
+        model = Net().cuda()
+        # model = torch.load(model_path)
+        model.load_state_dict(checkpoint['state_dict'])
+        model.eval()
         read_test_data()
     except Exception as e:
         traceback.print_exc()

@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="liu@10.21.243.59:22">
+  <component name="PublishConfigData" autoUpload="Always" serverName="liu@10.50.21.134:22">
     <serverData>
       <paths name="liu@10.21.243.59:22">
         <serverdata>
           <mappings>
             <mapping deploy="/home/liu/chenhaoran/Mymodel" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="liu@10.50.21.134:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/liu/chenhaoran/Mymodel_wkl" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

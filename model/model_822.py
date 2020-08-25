@@ -3,10 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 from torchsummary import summary
-from tensorboardX import SummaryWriter
-
-
-writer = SummaryWriter('runs/')
 
 class ResBlock(nn.Module):
     """
@@ -118,6 +114,7 @@ class Net(nn.Module):
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
         )
+
         #######################################
 
         # Step2:第一个和第二个res_block + shortcut add
@@ -543,8 +540,5 @@ class Net(nn.Module):
         # return [relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, x]
 
 if __name__ == '__main__':
-    xx = torch.rand(2,3,320,320).cuda()
     model = Net().cuda()
-    writer.add_graph(model,xx)
     summary(model,(3,320,320))
-    print('ok')

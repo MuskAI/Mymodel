@@ -139,28 +139,38 @@ def save_mid_result(mid_output, label, epoch, batch_index, mid_save_root='./mid_
             show_outputs = np.array(show_outputs, dtype='uint8')
             show_labels = np.array(label[index].cpu().detach()) * 255
             show_labels = np.array(show_labels, dtype='uint8')
-            for i in range(show_outputs.size(0)):
+            for i in range(show_outputs.shape[0]):
                 file_name_output = 'mid_output_epoch%d_batch_index%d@%d.png' % (epoch, batch_index, i)
                 file_output_dir = os.path.join(mid_output_dir, file_name_output)
                 file_name_label = 'mid_label_epoch%d_batch_index%d@%d.png' % (epoch, batch_index, i)
                 file_label_dir = os.path.join(mid_label_dir, file_name_label)
 
-                show_outputs = Image.fromarray(show_outputs[i, 0, :, :]).convert('RGB')
-                show_outputs.save(file_output_dir)
+                show_outputs_t = Image.fromarray(show_outputs[i, 0, :, :]).convert('RGB')
+                show_outputs_t.save(file_output_dir)
 
-                show_labels = Image.fromarray(show_labels[i, 0, :, :]).convert('RGB')
-                show_labels.save(file_label_dir)
+                show_labels_t = Image.fromarray(show_labels[i, 0, :, :]).convert('RGB')
+                show_labels_t.save(file_label_dir)
         else:
             if save_8map:
-                show_8map = np.array(mid_output[index].cpu().detach()) * 255
-                show_8map = np.array(mid_output, dtype='uint8')
-                for i in range(show_8map.size(0)):
+
+                for i in range(show_outputs.shape[0]):
+                    show_8map = np.array(mid_output[index].cpu().detach()) * 255
+                    show_8map = np.array(show_8map, dtype='uint8')
                     file_name_8map = 'mid_8map_epoch%d_batch_index%d@No%d-%d.png' % (epoch, batch_index,index,i)
-                    file_8map_dir = os.path.join(mid_label_dir, file_name_8map)
+                    file_8map_dir = os.path.join(mid_8_map_dir, file_name_8map)
                     show_8map = show_8map.transpose((0,2,3,1))
-                    show_8map = Image.fromarray(show_8map[i, :, :, :]).convert('RGB')
-                    show_8map.save(file_8map_dir)
+                    show_8map_t = Image.fromarray(show_8map[i, :, :, :]).convert('RGB')
+                    show_8map_t.save(file_8map_dir)
             else:
                 # print('不保存')
                 break
+
+def to_none_class_map(dou_em):
+    # 转化为无类别的GT 100 255 为边缘
+    dou_em = np.where(dou_em == 50, 0, dou_em)
+    dou_em = np.where(dou_em == 100, 1, dou_em)
+    dou_em = np.where(dou_em == 255, 1, dou_em)
+    dou_em = np.array(dou_em[:, :])
+    # dou_em = np.expand_dims(dou_em, 2)
+    return dou_em
 

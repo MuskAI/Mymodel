@@ -1,9 +1,7 @@
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score,precision_score,recall_score,f1_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score
+from sklearn.metrics import precision_score,accuracy_score,f1_score,recall_score
+
 # loss function
 
 def sigmoid_cross_entropy_loss(prediction, label):
@@ -83,18 +81,6 @@ def CE_loss(prediction,label):
     return torch.sum(cost)
 
 
-def my_accuracy_score(prediction,label):
-    prediction = np.squeeze(prediction)
-    label = np.squeeze(label)
-    batch_size = prediction.shape[0]
-
-    acc = 0
-    for i in range(batch_size):
-        prediction[i,:,:] = np.where(prediction[i,:,:] >0.6,1,0)
-        acc += accuracy_score(prediction[i,:,:],label[i,:,:])
-    return acc
-
-
 
 
 def BCE_loss(prediction,label):
@@ -118,7 +104,7 @@ def my_precision_score(prediction,label):
     y = np.array(y.cpu().detach())
     y = np.where(y > 0.5, 1, 0)
     l = np.array(l.cpu().detach())
-    return precision_score(y, l,average='micro')
+    return precision_score(y, l,average='macro')
 
 def my_acc_score(prediction,label):
     y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
@@ -129,10 +115,23 @@ def my_acc_score(prediction,label):
     return accuracy_score(y,l)
 
 def my_f1_score(prediction,label):
+
     y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
     l = label.reshape(label.size()[0] * label.size()[1] * label.size()[2] * label.size()[3])
 
     y = np.array(y.cpu().detach())
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
-    return f1_score(y,l,average='micro')
+
+    return f1_score(y,l,average='macro')
+
+def my_recall_score(prediction,label):
+
+    y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
+    l = label.reshape(label.size()[0] * label.size()[1] * label.size()[2] * label.size()[3])
+
+    y = np.array(y.cpu().detach())
+    y = np.where(y > 0.5, 1, 0).astype('int')
+    l = np.array(l.cpu().detach()).astype('int')
+
+    return recall_score(y,l,average='macro')
