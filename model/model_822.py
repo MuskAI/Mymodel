@@ -534,6 +534,7 @@ class Net(nn.Module):
         x = torch.cat([relation_map_1, relation_map_2, relation_map_3, relation_map_4, relation_map_5, relation_map_6,
                        relation_map_7, relation_map_8, relation_map_skip], 1)
         x = self.fusion_out(x)
+
         #################################
         return [x,relation_map_1, relation_map_2, relation_map_3, relation_map_4, relation_map_5, relation_map_6,
                    relation_map_7, relation_map_8]

@@ -1,6 +1,6 @@
 import torch.optim as optim
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
-    wce_huber_loss_8,my_recall_score
+    wce_huber_loss_8 , my_recall_score
 import conf.global_setting as settings
 from datasets.dataset import DataParser
 from model.model_812 import Net
@@ -312,6 +312,7 @@ def main():
     # model.apply(weights_init)
 
     # 模型可持续化
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
     if args.resume:
         if isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -334,7 +335,7 @@ def main():
         print("=> no checkpoint found at '{}'".format(args.resume))
 
     # 优化器
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr,betas=(0.9,0.999),eps=1e-8)
+
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
     for epoch in range(args.start_epoch, args.maxepoch):

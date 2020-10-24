@@ -22,11 +22,11 @@ class DataParser():
         # self.double_edge_file = '/home/liu/chenhaoran/datasets/ground_truth_result'
         test =False
         if test:
-            self.train_file = '/home/liu/chenhaoran/New_data_to_debug/train_dataset_train_percent_0.80@8_21'
-            self.double_edge_file = '/home/liu/chenhaoran/New_data_to_debug/train_gt_train_percent_0.80@8_21'
+            self.train_file = '/media/liu/File/8_20_dataset_after_divide/train_dataset_train_percent_0.80@8_20'
+            self.double_edge_file = '/media/liu/File/8_20_dataset_after_divide/train_gt_train_percent_0.80@8_20'
         else:
-            self.train_file = '/home/liu/chenhaoran/8_20_dataset_after_divide/train_dataset_train_percent_0.80@8_20'
-            self.double_edge_file = '/home/liu/chenhaoran/8_20_dataset_after_divide/train_gt_train_percent_0.80@8_20'
+            self.train_file = '/media/liu/File/8_20_dataset_after_divide/train_dataset_train_percent_0.80@8_20'
+            self.double_edge_file = '/media/liu/File/8_20_dataset_after_divide/train_gt_train_percent_0.80@8_20'
         # self.save_path0_1 = '/home/libiao/数据/6.1混合数据/e0_1'
         # self.save_path1_1 = '/home/libiao/数据/6.1混合数据/e1_1'
         # self.save_path01 = '/home/libiao/数据/6.1混合数据/e01'

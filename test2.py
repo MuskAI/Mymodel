@@ -89,9 +89,9 @@ def read_test_data():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/home/liu/chenhaoran/Mymodel_wkl/mid_result_821_val/mid_result_epoch_0/mid_label'
+        test_data_path = '/home/liu/chenhaoran/Mymodel/mid_result_821_val'
         output_path = './'
-        model_path = '/home/liu/chenhaoran/Mymodel_wkl/record823/epoch-1-checkpoint.pth'
+        model_path = '/home/liu/chenhaoran/Mymodel/record823/epoch-20-checkpoint.pth'
         checkpoint = torch.load(model_path)
         model = Net().cuda()
         # model = torch.load(model_path)
