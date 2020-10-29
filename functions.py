@@ -26,9 +26,9 @@ def cross_entropy_loss(prediction, label):
     mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
     cost = torch.nn.functional.binary_cross_entropy(
-            prediction.float(),label.float(), weight=mask, reduce=False)
-    return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
-
+            prediction.float(),label.float(), weight=mask, reduction="mean")
+    # return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
+    return torch.sum(cost)
 def weighted_nll_loss(prediction, label):
     label = torch.squeeze(label.long(), dim=0)
     nch = prediction.shape[1]
@@ -93,6 +93,7 @@ def wce_huber_loss(prediction,label):
     loss2 = smooth_l1_loss(prediction,label)
     loss3 = l1_loss(prediction,label)
     return 0.6*loss1+0.35*loss2+0.05*loss3
+
 
 def wce_huber_loss_8(prediction,label):
     loss1 = cross_entropy_loss(prediction,label)

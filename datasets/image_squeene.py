@@ -27,7 +27,7 @@ def get_outfile(infile, outfile):
     if outfile:
         return outfile
     dir, suffix = os.path.splitext(infile)
-    dir='EightAndDualAttention/'
+    dir='Temp_Working_Dir/'
     outfile = '{}out{}'.format(dir, suffix)
     return outfile
 
