@@ -2,7 +2,8 @@ import torch.optim as optim
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
     wce_huber_loss_8 , my_recall_score
 import conf.global_setting as settings
-from datasets.dataset import DataParser
+# from datasets.dataset import DataParser
+from data_parser_down_stage_1024 import DataParser
 from model.model_812 import Net
 import os, sys
 import numpy as np
@@ -15,9 +16,8 @@ import torch
 from torch.optim import lr_scheduler
 import matplotlib
 
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 from utils import Logger, Averagvalue, save_checkpoint, weights_init, load_pretrained,save_mid_result
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
@@ -66,7 +66,7 @@ if not isdir(model_save_dir):
     os.makedirs(model_save_dir)
 
 # tensorboard 使用
-writer = SummaryWriter('runs/' + '%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+# writer = SummaryWriter('runs/' + '%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 
 
 def generate_minibatches(dataParser, train=True):
@@ -91,20 +91,23 @@ def generate_minibatches(dataParser, train=True):
         chanel7 = chanel7.transpose(0, 3, 1, 2)
         chanel8 = chanel8.transpose(0, 3, 1, 2)
         double_edge = double_edge.transpose(0, 3, 1, 2)
-        # ims_t = ims.transpose(0,1,2,3)
-        # plt.figure('ims')
-        # plt.imshow(ims[0,0,:,:]*255)
-        # plt.show()
-        #
-        # plt.figure('gt')
-        # plt.imshow(double_edge[0,0,:,:])
-        # plt.show()
+        ims_t = ims.transpose(0,1,2,3)
+        plt.figure('ims')
+        plt.imshow(ims[0,0,:,:]*255)
+
+        plt.show()
+        plt.savefig("temp_ims.png")
+
+        plt.figure('gt')
+        plt.imshow(double_edge[0,0,:,:])
+
+        plt.show()
+        plt.savefig("temp_gt.png")
         yield (ims, [double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8])
 
 
-def train(model, optimizer, epoch, save_dir):
+def train(model, optimizer, dataParser, epoch, save_dir):
     # 读取数据的迭代器
-    dataParser = DataParser(args.batch_size)
     train_epoch = int(dataParser.steps_per_epoch)
 
     # 变量保存
@@ -151,24 +154,25 @@ def train(model, optimizer, epoch, save_dir):
             loss_8t = torch.zeros(())
 
         # 输出结果[img，8张图]
+        optimizer.zero_grad()
         outputs = model(images)
 
         # 这里放保存中间结果的代码
-        if batch_index in args.mid_result_index:
-            save_mid_result(outputs, labels, epoch, batch_index, args.mid_result_root,save_8map=True,train_phase=True)
+        # if batch_index in args.mid_result_index:
+        #     save_mid_result(outputs, labels, epoch, batch_index, args.mid_result_root,save_8map=True,train_phase=True)
 
         # 建立loss
         loss = wce_huber_loss(outputs[0], labels[0]) * 12
-        writer.add_scalar('fuse_loss_per_epoch',loss.item()/12,global_step = epoch * train_epoch + batch_index)
+        # writer.add_scalar('fuse_loss_per_epoch',loss.item()/12,global_step = epoch * train_epoch + batch_index)
         for c_index, c in enumerate(outputs[1:]):
             one_loss_t = wce_huber_loss_8(c, labels[c_index + 1])
             loss_8t += one_loss_t
-            writer.add_scalar('%d_map_loss'%(c_index),one_loss_t.item(),global_step=train_epoch)
+            # writer.add_scalar('%d_map_loss'%(c_index),one_loss_t.item(),global_step=train_epoch)
         loss += loss_8t
         loss = loss / 20
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
+
         # measure the accuracy and record loss
         losses.update(loss.item())
         map8_loss_value.update(loss_8t.item())
@@ -204,16 +208,16 @@ def train(model, optimizer, epoch, save_dir):
             print(info)
 
         # 对于每一个epoch内按照一定的频率保存评价指标，以观察震荡情况
-        if batch_index % args.per_epoch_freq == 0:
-            writer.add_scalar('tr_loss_per_epoch', losses.val, global_step=epoch * train_epoch + batch_index)
-            writer.add_scalar('f1_score_per_epoch', f1score, global_step=epoch * train_epoch + batch_index)
-            writer.add_scalar('precision_score_per_epoch', precisionscore,
-                              global_step=epoch * train_epoch + batch_index)
-            writer.add_scalar('acc_score_per_epoch', accscore, global_step=epoch * train_epoch + batch_index)
-            writer.add_scalar('recall_score_per_epoch',recallscore,global_step=epoch * train_epoch + batch_index)
-
-        if batch_index >= train_epoch:
-            break
+        # if batch_index % args.per_epoch_freq == 0:
+        #     writer.add_scalar('tr_loss_per_epoch', losses.val, global_step=epoch * train_epoch + batch_index)
+        #     writer.add_scalar('f1_score_per_epoch', f1score, global_step=epoch * train_epoch + batch_index)
+        #     writer.add_scalar('precision_score_per_epoch', precisionscore,
+        #                       global_step=epoch * train_epoch + batch_index)
+        #     writer.add_scalar('acc_score_per_epoch', accscore, global_step=epoch * train_epoch + batch_index)
+        #     writer.add_scalar('recall_score_per_epoch',recallscore,global_step=epoch * train_epoch + batch_index)
+        #
+        # if batch_index >= train_epoch:
+        #     break
 
     save_checkpoint({
         'epoch': epoch,
@@ -309,10 +313,13 @@ def main():
     else:
         model.cpu()
     # 模型初始化
+    # 如果没有这一步会根据正态分布自动初始化
     # model.apply(weights_init)
 
     # 模型可持续化
+    # 这是tensorflow代码中的配置：    optimizer = Adam(lr=1e-2, beta_1=0.9, beta_2=0.999)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
+
     if args.resume:
         if isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -325,26 +332,24 @@ def main():
             optimizer.load_state_dict(checkpoint['optimizer'])
 
         else:
-            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
-                                  weight_decay=args.weight_decay)
             print("=> no checkpoint found at '{}'".format(args.resume))
 
 
     else:
-        optimizer = optim.SGD(model.parameters(),lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
         print("=> no checkpoint found at '{}'".format(args.resume))
 
-    # 优化器
-
+    # 调整学习率
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
+    # 数据迭代器
+    dataParser = DataParser(args.batch_size)
     for epoch in range(args.start_epoch, args.maxepoch):
-        tr_avg_loss, tr_detail_loss = train(model=model, optimizer=optimizer, epoch=epoch,
-                                            save_dir=args.model_save_dir)
+        tr_avg_loss, tr_detail_loss = train(model=model, optimizer=optimizer, dataParser = dataParser,epoch=epoch,
+                                            save_dir=args.model_save_dir,)
 
        # val_avg_loss, val_detail_loss = val(model=model, epoch=epoch)
-        writer.add_scalar('tr_avg_loss_per_epoch', tr_avg_loss, global_step=epoch)
-        writer.add_scalar('lr_per_epoch', scheduler.get_lr(), global_step=epoch)
+        # writer.add_scalar('tr_avg_loss_per_epoch', tr_avg_loss, global_step=epoch)
+        # writer.add_scalar('lr_per_epoch', scheduler.get_lr(), global_step=epoch)
         #writer.add_scalar('val_avg_loss_per_epoch', val_avg_loss, global_step=epoch)
 
         # 保存模型

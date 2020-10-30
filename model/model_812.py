@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
 from torchsummary import summary
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 
-writer = SummaryWriter('runs/')
+# writer = SummaryWriter('runs/')
 
 class ResBlock(nn.Module):
     """

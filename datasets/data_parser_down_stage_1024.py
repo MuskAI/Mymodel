@@ -688,9 +688,9 @@ class MixData():
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
         self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
 
-        # if True:
-        #     self.src_path_list = [r'H:\10月数据准备\10月12日实验数据\casia\src']
-        #     self.casia_gt_path = r'H:\10月数据准备\10月12日实验数据\casia\gt'
+        if True:
+            self.src_path_list = [r'C:\Users\musk\Desktop\少量调试数据\debug_src']
+            self.cm_gt_path = r'C:\Users\musk\Desktop\少量调试数据\debug_gt'
 
     def gen_dataset(self):
         """
@@ -757,8 +757,9 @@ class MixData():
         cm_type = ['Default','poisson']
         negative_type = ['negative']
         CASIA_type = ['Tp']
+        debug_type = ['debug']
         type= []
-        name = path.split('/')[-1]
+        name = path.split('\\')[-1]
         # name = path.split('\\')[-1]
         for sp_flag in sp_type:
             if sp_flag in name[:2]:
@@ -779,6 +780,7 @@ class MixData():
             if CASIA_flag in name[:2]:
                 type.append('casia')
                 break
+
 
         # 判断正确性
         if len(type) != 1:
