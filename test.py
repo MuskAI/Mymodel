@@ -59,7 +59,7 @@ def read_test_data():
             img = np.transpose(img,(2,0,1))
             img = img[np.newaxis,:,:,:]
             img = torch.from_numpy(img)
-            img = img.cuda()
+            img = img.cpu()
             print(img.shape)
             output = model(img)
             output = output[0]
@@ -70,6 +70,7 @@ def read_test_data():
             output = np.array(output)*255
             output = np.asarray(output,dtype='uint8')
             # output_img = Image.fromarray(output)
+
             # output_img.save(output_path + 'output_'+name)
             cv.imwrite(output_path + 'output_'+name,output)
     except Exception as e:
@@ -81,9 +82,9 @@ def read_test_data():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/home/liu/chenhaoran/Mymodel_wkl/datasets/tes_820'
-        output_path = 'test_record/test_820_3/'
-        model_path = './record821/record2/epoch-16-training-record.pth'
+        test_data_path = '/media/liu/File/少量调试数据2/debug_src'
+        output_path = 'test_record/test_1030/'
+        model_path = '/home/liu/chenhaoran/Mymodel/record823/1030checkpoint_epoch8.pth'
         model = torch.load(model_path)
         model = model.eval()
         print(model)

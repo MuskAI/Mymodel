@@ -7,7 +7,7 @@ import sys
 import shutil
 if __name__ == '__main__':
     large_dataset_path = r'H:\8_20_dataset_after_divide'
-    target_dataset_path = r'H:\少量调试数据'
+    target_dataset_path = r'H:\少量调试数据2'
     src = 'train_dataset_train_percent_0.80@8_20'
     # poisson = 'tamper_poisson_result'
     gt = 'train_gt_train_percent_0.80@8_20'

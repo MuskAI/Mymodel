@@ -1,8 +1,7 @@
 import torch.optim as optim
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
-    wce_huber_loss_8 , my_recall_score
-import conf.global_setting as settings
-# from datasets.dataset import DataParser
+    wce_huber_loss_8 , my_recall_score,debug_ce,cross_entropy_loss
+from torch.nn import init
 from data_parser_down_stage_1024 import DataParser
 from model.model_812 import Net
 import os, sys
@@ -22,10 +21,10 @@ from utils import Logger, Averagvalue, save_checkpoint, weights_init, load_pretr
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=4, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=2, type=int, metavar='BT',
                     help='batch size')
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -35,14 +34,14 @@ parser.add_argument('--stepsize', default=10, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
-parser.add_argument('--maxepoch', default=100, type=int, metavar='N',
+parser.add_argument('--maxepoch', default=1000, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--itersize', default=10, type=int,
                     metavar='IS', help='iter size')
 # =============== misc
 parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('--print_freq', '-p', default=10, type=int,
+parser.add_argument('--print_freq', '-p', default=1, type=int,
                     metavar='N', help='print frequency (default: 50)')
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
@@ -67,7 +66,22 @@ if not isdir(model_save_dir):
 
 # tensorboard 使用
 # writer = SummaryWriter('runs/' + '%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
-
+# def weights_init(m):
+#     classname=m.__class__.__name__
+#     if classname.find('Conv') != -1:
+#         xavier(m.weight.data)
+#         xavier(m.bias.data)
+# net = Net()#构建网络
+# net.apply(weights_init) #apply函数会递归地搜索网络内的所有module并把参数表示的函数应用到所有的module上。
+#             #对所有的Conv层都初始化权重.
+# def weights_init(m):
+#     classname = m.__class__.__name__
+#     if classname.find('Conv2d') != -1:
+#         init.xavier_normal_(m.weight.data)
+#         init.constant_(m.bias.data, 0.0)
+#     elif classname.find('Linear') != -1:
+#         init.xavier_normal_(m.weight.data)
+#         init.constant_(m.bias.data, 0.0)
 
 def generate_minibatches(dataParser, train=True):
     while True:
@@ -91,18 +105,18 @@ def generate_minibatches(dataParser, train=True):
         chanel7 = chanel7.transpose(0, 3, 1, 2)
         chanel8 = chanel8.transpose(0, 3, 1, 2)
         double_edge = double_edge.transpose(0, 3, 1, 2)
-        ims_t = ims.transpose(0,1,2,3)
-        plt.figure('ims')
-        plt.imshow(ims[0,0,:,:]*255)
-
-        plt.show()
-        plt.savefig("temp_ims.png")
-
-        plt.figure('gt')
-        plt.imshow(double_edge[0,0,:,:])
-
-        plt.show()
-        plt.savefig("temp_gt.png")
+        # ims_t = ims.transpose(0,1,2,3)
+        # plt.figure('ims')
+        # plt.imshow(ims[0,0,:,:]*255)
+        #
+        # plt.show()
+        # plt.savefig("temp_ims.png")
+        #
+        # plt.figure('gt')
+        # plt.imshow(double_edge[0,0,:,:])
+        #
+        # plt.show()
+        # plt.savefig("temp_gt.png")
         yield (ims, [double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8])
 
 
@@ -152,26 +166,76 @@ def train(model, optimizer, dataParser, epoch, save_dir):
         else:
             loss = torch.zeros(1)
             loss_8t = torch.zeros(())
+        # images = images.cpu()
+        # _labels = labels[0].cpu()
+        # _images = np.array(images)
+        # _labels = np.array(_labels)
+        # #
+        # # im[..., 0] -= 138.008
+        # # im[..., 1] -= 127.406
+        # # im[..., 2] -= 118.982
+        # for i in range(2):
+        #     t = _images[i,:,:,:]
+        #     t = np.transpose(t,(1,2,0))
+        #
+        #     t = t *255
+        #     t[:,:,0] +=138.008
+        #     t[:,:, 1] += 127.406
+        #     t[:,:, 2] += 118.982
+        #     t = np.array(t,dtype='uint8')
+        #     plt.figure('img')
+        #     plt.imshow(t)
+        #     plt.show()
+        # ################################
+        # images = images.cuda()
+        # # 全面检查输入输出
+        #
+        # # 1. 检查输入
+        # # 2. 检查gt
+        # for i in range(2):
+        #     t = _labels[i,:,:]
+        #     t = np.squeeze(t,0)
+        #     t = np.array(t,dtype='uint8')
+        #     plt.figure('gt')
+        #     plt.imshow(t)
+        #     plt.show()
+        #
+
+        ###############################
 
         # 输出结果[img，8张图]
-        optimizer.zero_grad()
-        outputs = model(images)
+        with torch.set_grad_enabled(True):
+            images.requires_grad = True
+            optimizer.zero_grad()
+            outputs = model(images)
+            _output = outputs[0].cpu()
+            _output = _output.detach().numpy()
+            if abs(batch_index - dataParser.steps_per_epoch) == 50:
+                for i in range(2):
+                    t = _output[i, :, :]
+                    t = np.squeeze(t, 0)
+                    t = t*255
+                    t = np.array(t,dtype='uint8')
+                    t = Image.fromarray(t)
 
-        # 这里放保存中间结果的代码
-        # if batch_index in args.mid_result_index:
-        #     save_mid_result(outputs, labels, epoch, batch_index, args.mid_result_root,save_8map=True,train_phase=True)
+                    t.save('the_midoutput_%d_%d'%(epoch,batch_index))
 
-        # 建立loss
-        loss = wce_huber_loss(outputs[0], labels[0]) * 12
-        # writer.add_scalar('fuse_loss_per_epoch',loss.item()/12,global_step = epoch * train_epoch + batch_index)
-        for c_index, c in enumerate(outputs[1:]):
-            one_loss_t = wce_huber_loss_8(c, labels[c_index + 1])
-            loss_8t += one_loss_t
-            # writer.add_scalar('%d_map_loss'%(c_index),one_loss_t.item(),global_step=train_epoch)
-        loss += loss_8t
-        loss = loss / 20
-        loss.backward()
-        optimizer.step()
+            # 这里放保存中间结果的代码
+            # if batch_index in args.mid_result_index:
+            #     save_mid_result(outputs, labels, epoch, batch_index, args.mid_result_root,save_8map=True,train_phase=True)
+
+            # 建立loss
+            loss = cross_entropy_loss(outputs[0], labels[0]) * 12
+
+            # writer.add_scalar('fuse_loss_per_epoch',loss.item()/12,global_step = epoch * train_epoch + batch_index)
+            for c_index, c in enumerate(outputs[1:]):
+                one_loss_t = cross_entropy_loss(c, labels[c_index + 1])
+                loss_8t += one_loss_t
+                # writer.add_scalar('%d_map_loss'%(c_index),one_loss_t.item(),global_step=train_epoch)
+            loss += loss_8t
+            loss = loss / 20
+            loss.backward()
+            optimizer.step()
 
         # measure the accuracy and record loss
         losses.update(loss.item())
@@ -216,8 +280,8 @@ def train(model, optimizer, dataParser, epoch, save_dir):
         #     writer.add_scalar('acc_score_per_epoch', accscore, global_step=epoch * train_epoch + batch_index)
         #     writer.add_scalar('recall_score_per_epoch',recallscore,global_step=epoch * train_epoch + batch_index)
         #
-        # if batch_index >= train_epoch:
-        #     break
+        if batch_index >= train_epoch:
+            break
 
     save_checkpoint({
         'epoch': epoch,
@@ -312,6 +376,8 @@ def main():
         model.cuda()
     else:
         model.cpu()
+
+    model.apply(weights_init)
     # 模型初始化
     # 如果没有这一步会根据正态分布自动初始化
     # model.apply(weights_init)
@@ -327,8 +393,6 @@ def main():
             model.load_state_dict(checkpoint['state_dict'])
             print("=> loaded checkpoint '{}'"
                   .format(args.resume))
-            optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
-                                  weight_decay=args.weight_decay)
             optimizer.load_state_dict(checkpoint['optimizer'])
 
         else:
@@ -353,9 +417,10 @@ def main():
         #writer.add_scalar('val_avg_loss_per_epoch', val_avg_loss, global_step=epoch)
 
         # 保存模型
-        save_file = os.path.join(args.model_save_dir, 'checkpoint_epoch{}.pth'.format(epoch))
-        save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()},
-                        filename=save_file)
+        if epoch%2 == 0:
+            save_file = os.path.join(args.model_save_dir, '1031checkpoint_epoch{}.pth'.format(epoch))
+            save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()},
+                            filename=save_file)
         scheduler.step()
 
     print('训练已完成!')

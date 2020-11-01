@@ -336,6 +336,7 @@ class Net(nn.Module):
             nn.Conv2d(128, 2, kernel_size=3, padding_mode='replicate', padding=1),
             nn.Sigmoid(),
         )
+
         self.relation_map_2 = nn.Sequential(
             nn.Conv2d(128, 2, kernel_size=3, padding_mode='replicate', padding=1),
             nn.Sigmoid(),

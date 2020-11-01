@@ -20,13 +20,17 @@ def sigmoid_cross_entropy_loss(prediction, label):
 def cross_entropy_loss(prediction, label):
     label = label.long()
     mask = (label != 0).float()
+    _ = np.array(mask.cpu())
+
     num_positive = torch.sum(mask).float()
     num_negative = mask.numel() - num_positive
-    #print (num_positive, num_negative)
+    # print (num_positive, num_negative)
     mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
-    cost = torch.nn.functional.binary_cross_entropy(
-            prediction.float(),label.float(), weight=mask, reduction="mean")
+    _ = np.array(mask.cpu())
+    # cost = torch.nn.functional.binary_cross_entropy(
+    #         p,label.float(), weight=mask)
+    cost = torch.nn.BCELoss()(prediction, label.float())
     # return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
     return torch.sum(cost)
 def weighted_nll_loss(prediction, label):
@@ -81,7 +85,9 @@ def CE_loss(prediction,label):
     return torch.sum(cost)
 
 
-
+def debug_ce(prediction,label):
+    cost = torch.nn.functional.binary_cross_entropy(prediction,label)
+    return cost
 
 def BCE_loss(prediction,label):
     loss1 = cross_entropy_loss(prediction,label)
@@ -105,7 +111,7 @@ def my_precision_score(prediction,label):
     y = np.array(y.cpu().detach())
     y = np.where(y > 0.5, 1, 0)
     l = np.array(l.cpu().detach())
-    return precision_score(y, l,average='macro')
+    return precision_score(y, l)
 
 def my_acc_score(prediction,label):
     y = prediction.reshape(prediction.size()[0]*prediction.size()[1]*prediction.size()[2]*prediction.size()[3])
@@ -124,7 +130,7 @@ def my_f1_score(prediction,label):
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
 
-    return f1_score(y,l,average='macro')
+    return f1_score(y,l)
 
 def my_recall_score(prediction,label):
 
@@ -135,4 +141,4 @@ def my_recall_score(prediction,label):
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
 
-    return recall_score(y,l,average='macro')
+    return recall_score(y,l)

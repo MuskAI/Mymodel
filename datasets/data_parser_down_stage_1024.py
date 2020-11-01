@@ -70,11 +70,15 @@ class DataParser():
             relation_8_map = DataParser.gen_8_2_map(self,np.array(dou_em))
             # im, dou_em = DataParser.combine_augment_method(self,im,dou_em,relation_8_map,index = index)
             im = np.array(im, dtype=np.float32)
-            im = im[..., ::-1]  # RGB 2 BGR
+            # im = im[..., ::-1]  # RGB 2 BGR
             # R=118.98194217348079 G=127.4061956623793 B=138.00865419127499
             im[..., 0] -= 138.008
             im[..., 1] -= 127.406
             im[..., 2] -= 118.982
+
+            im[..., 0] /= 255
+            im[..., 1] /= 255
+            im[..., 2] /= 255
 
             dou_chanel = [0 for i in range(8)]
             for i in range(8):
@@ -94,23 +98,23 @@ class DataParser():
             final_c = np.concatenate((c_1, c_2, c_3, c_4, c_5, c_6, c_7, c_8), axis=2)
             chanelfuse.append(final_c)
 
-            if os.path.exists(os.path.join('/media/liu/File/10月数据准备/10月12日实验数据/cm/band_save',
-                                                 self.Y_train_or_test[index].split('/')[-1].split('.')[
-                                                     0] + '_band_gt.' +
-                                                 self.Y_train_or_test[index].split('/')[-1].split('.')[1])):
-
-                dou_em = Image.open(os.path.join('/media/liu/File/10月数据准备/10月12日实验数据/cm/band_save',
-                                                 self.Y_train_or_test[index].split('/')[-1].split('.')[
-                                                     0] + '_band_gt.' +
-                                                 self.Y_train_or_test[index].split('/')[-1].split('.')[1]))
-
-                if len(dou_em.split()) ==3:
-                    dou_em = dou_em.split()[0]
-                else:
-                    pass
+            # if os.path.exists(os.path.join('/media/liu/File/10月数据准备/10月12日实验数据/cm/band_save',
+            #                                      self.Y_train_or_test[index].split('/')[-1].split('.')[
+            #                                          0] + '_band_gt.' +
+            #                                      self.Y_train_or_test[index].split('/')[-1].split('.')[1])):
+            #
+            #     dou_em = Image.open(os.path.join('/media/liu/File/10月数据准备/10月12日实验数据/cm/band_save',
+            #                                      self.Y_train_or_test[index].split('/')[-1].split('.')[
+            #                                          0] + '_band_gt.' +
+            #                                      self.Y_train_or_test[index].split('/')[-1].split('.')[1]))
+            #
+            #
+            # else:
+            #     pass
+            if len(dou_em.split()) == 3:
+                dou_em = dou_em.split()[0]
             else:
                 pass
-
             dou_em = np.array(dou_em, dtype=np.float32)
 
             # 转化为无类别的GT 100 255 为边缘
@@ -673,7 +677,7 @@ class MixData():
                          # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
                          # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src',
         src_path_list = ['/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
-                           '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+                          # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
                         #'/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
                         # '/media/liu/File/Sp_320_dataset/tamper_result_320',
                         # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'
@@ -688,9 +692,9 @@ class MixData():
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
         self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
 
-        if True:
-            self.src_path_list = [r'C:\Users\musk\Desktop\少量调试数据\debug_src']
-            self.cm_gt_path = r'C:\Users\musk\Desktop\少量调试数据\debug_gt'
+        if False:
+            self.src_path_list = ['/media/liu/File/少量调试数据2/debug_src']
+            self.cm_gt_path = '/media/liu/File/少量调试数据2/debug_gt'
 
     def gen_dataset(self):
         """
@@ -759,7 +763,7 @@ class MixData():
         CASIA_type = ['Tp']
         debug_type = ['debug']
         type= []
-        name = path.split('\\')[-1]
+        name = path.split('/')[-1]
         # name = path.split('\\')[-1]
         for sp_flag in sp_type:
             if sp_flag in name[:2]:
