@@ -20,6 +20,7 @@ import cv2 as cv
 from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss,wce_huber_loss
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 from utils import to_none_class_map
+device = torch.device("cpu")
 
 def read_test_data():
     try:
@@ -124,9 +125,9 @@ if __name__ == '__main__':
     try:
         test_data_path = '/media/liu/File/少量调试数据2/debug_src'
         output_path = 'test_record/test_1030_3/'
-        model_path = '/home/liu/chenhaoran/Mymodel/record823/1030checkpoint_epoch31.pth'
-        checkpoint = torch.load(model_path)
-        model = Net().cpu()
+        model_path = '/home/liu/chenhaoran/Mymodel/record823/1101checkpoint_epoch7.pth'
+        checkpoint = torch.load(model_path,map_location=torch.device('cpu'))
+        model = Net().to(device)
         # model = torch.load(model_path)
         model.load_state_dict(checkpoint['state_dict'])
         model.eval()

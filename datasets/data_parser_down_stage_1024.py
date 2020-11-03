@@ -676,8 +676,8 @@ class MixData():
             # '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20']
                          # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
                          # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src',
-        src_path_list = ['/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
-                          # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+        src_path_list = [#'/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
+                          '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
                         #'/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
                         # '/media/liu/File/Sp_320_dataset/tamper_result_320',
                         # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'
@@ -692,7 +692,7 @@ class MixData():
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
         self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
 
-        if False:
+        if True:
             self.src_path_list = ['/media/liu/File/少量调试数据2/debug_src']
             self.cm_gt_path = '/media/liu/File/少量调试数据2/debug_gt'
 
