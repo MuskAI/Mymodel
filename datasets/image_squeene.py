@@ -53,27 +53,6 @@ def compress_image(infile, outfile='', mb=20, step=10, quality=80):
         o_size = get_size(outfile)
     return outfile
 
-# def compress_image(im, o_size, mb=10, step=5, quality=95):
-#     """不改变图片尺寸压缩到指定大小
-#     :param infile: 压缩源图片
-#     :param outfile: 压缩文件保存地址
-#     :param mb: 压缩目标 倍数
-#     :param step: 每次调整的压缩比率
-#     :param quality: 初始压缩比率
-#     :return: 压缩文件地址，压缩文件大小
-#     """
-#     mb=o_size/mb
-#     if o_size <= mb:
-#         return im
-#     while o_size > mb:
-#         im.save('1.jpg', quality=quality)
-#         if quality - step < 0:
-#             break
-#         quality -= step
-#         o_size = get_size('1.jpg')
-#         im = Image.open('1.jpg')
-#     return im
-
 def resize_image(infile, outfile='', x_s=1376):
     """修改图片尺寸
     :param infile: 图片源文件

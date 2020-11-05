@@ -5,6 +5,7 @@ Description:
 1.经过测试之后的代码，已经work了
 2.以后的代码都是基于这个
 """
+
 import torch.optim as optim
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
     wce_huber_loss_8 , my_recall_score,debug_ce,cross_entropy_loss
@@ -32,7 +33,7 @@ parser.add_argument('--batch_size', default=2, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')

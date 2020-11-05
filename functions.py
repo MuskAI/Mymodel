@@ -28,9 +28,10 @@ def cross_entropy_loss(prediction, label):
     mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
     _ = np.array(mask.cpu())
-    # cost = torch.nn.functional.binary_cross_entropy(
-    #         p,label.float(), weight=mask)
-    cost = torch.nn.BCELoss()(prediction, label.float())
+    cost = torch.nn.functional.binary_cross_entropy(
+            prediction.float(),label.float(), weight=mask)
+    # cost = torch.nn.BCELoss()(prediction, label.float())
+
     # return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
     return torch.sum(cost)
 def weighted_nll_loss(prediction, label):

@@ -39,18 +39,18 @@ def read_test_data():
             # plt.show()
 
             image_path = os.path.join(test_data_path,name)
-            gt_path = Helper().find_gt(image_path)
+            # gt_path = Helper().find_gt(image_path)
 
-            gt = Image.open(gt_path)
-            gt = np.array(gt)
-            plt.figure('gt')
-            plt.imshow(gt)
-            plt.show()
-            gt = np.where((gt == 255) | (gt == 100), 1, 0)
-            plt.figure('gt2')
-            plt.imshow(gt)
-            plt.show()
-            gt_ = np.array(gt,dtype='float32')
+            # gt = Image.open(gt_path)
+            # gt = np.array(gt)
+            # plt.figure('gt')
+            # plt.imshow(gt)
+            # plt.show()
+            # gt = np.where((gt == 255) | (gt == 100), 1, 0)
+            # plt.figure('gt2')
+            # plt.imshow(gt)
+            # plt.show()
+            # gt_ = np.array(gt,dtype='float32')
 
             img = Image.open(image_path)
             img = np.array(img,dtype='float32')
@@ -81,10 +81,10 @@ def read_test_data():
             output_ = output.squeeze(2)
 
             # 在这里计算一下loss
-            output_ = torch.from_numpy(output_)
-            gt_ = torch.from_numpy(gt_)
-            loss = torch.nn.functional.binary_cross_entropy(output_,gt_)
-            print(loss)
+            # output_ = torch.from_numpy(output_)
+            # gt_ = torch.from_numpy(gt_)
+            # loss = wce_huber_loss(output_,gt_)
+            # print(loss)
             plt.figure('prediction')
             plt.imshow(output_)
             plt.show()
@@ -123,9 +123,13 @@ class Helper():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/media/liu/File/少量调试数据2/debug_src'
-        output_path = 'test_record/test_1030_3/'
-        model_path = '/home/liu/chenhaoran/Mymodel/record823/1101checkpoint_epoch7.pth'
+        test_data_path = '/media/liu/File/10月数据准备/blurtest'
+        output_path = 'test_record/test_blur'
+        if os.path.exists(output_path):
+            pass
+        else:
+            os.mkdir(output_path)
+        model_path = '/home/liu/chenhaoran/Mymodel/record823/1101checkpoint_epoch28.pth'
         checkpoint = torch.load(model_path,map_location=torch.device('cpu'))
         model = Net().to(device)
         # model = torch.load(model_path)

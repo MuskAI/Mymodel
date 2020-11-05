@@ -40,6 +40,9 @@ class ResBlock(nn.Module):
 
 
 class Aspp(nn.Module):
+    """
+    dilation rate:6 12 12
+    """
     def __init__(self, input_shape, out_stride):
         super(Aspp, self).__init__()
         self.out_shape = int(input_shape[0] / out_stride)
