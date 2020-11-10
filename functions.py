@@ -2,6 +2,34 @@ import numpy as np
 import torch
 from sklearn.metrics import precision_score,accuracy_score,f1_score,recall_score
 
+
+#
+# class Evaluation:
+#     def __init__(self,output,label):
+#         self.output = output
+#         self.label = label
+#
+#     def start_evaluation(self,compute_f1 = True,compute_precision= True,compute_accuracy = True,compute_recall = True):
+#
+#         if compute_f1:
+#             pass
+#         if compute_precision:
+#             pass
+#         if compute_recall:
+#             pass
+#         if compute_accuracy:
+#             pass
+#
+#         return
+
+
+
+
+
+
+
+
+
 # loss function
 
 def sigmoid_cross_entropy_loss(prediction, label):

@@ -1,14 +1,10 @@
 """
-created by haoran
-"""
-"""
 Created by HAORAN
 time: 1101
 Description:
 1.经过测试之后的代码，已经work了
 2.以后的代码都是基于这个
 """
-
 import torch.optim as optim
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
     wce_huber_loss_8 , my_recall_score,debug_ce,cross_entropy_loss
@@ -19,7 +15,6 @@ from dataset import gen_band_gt
 from model.model_two_stage import Two_Stage_Net as Net
 from model.model_two_stage import Net_Stage_1 as Net1
 from model.model_two_stage import Net_Stage_2 as Net2
-
 import os, sys
 import numpy as np
 from PIL import Image
@@ -33,7 +28,9 @@ import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
 from utils import Logger, Averagvalue, save_checkpoint, weights_init, load_pretrained,save_mid_result
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
-
+""""""""""""""""""""""""""""""""""""
+"             参数                  "
+""""""""""""""""""""""""""""""""""""
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=3, type=int, metavar='BT',
                     help='batch size')
@@ -74,7 +71,9 @@ args = parser.parse_args()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
+""""""""""""""""""""""""""""""""""""
+"            路径准备               "
+""""""""""""""""""""""""""""""""""""
 model_save_dir = abspath(dirname(__file__))
 model_save_dir = join(model_save_dir, args.model_save_dir)
 if not isdir(model_save_dir):
@@ -83,7 +82,12 @@ if not isdir(model_save_dir):
 # tensorboard 使用
 writer = SummaryWriter('runs/' + '1104_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 
-def generate_minibatches(   dataParser, train=True):
+""""""""""""""""""""""""""""""""""""
+"            数据读取               "
+""""""""""""""""""""""""""""""""""""
+
+
+def generate_minibatches(dataParser, train=True):
     while True:
         if train:
             batch_ids = np.random.choice(dataParser.X_train, dataParser.batch_size)
@@ -130,6 +134,95 @@ def generate_minibatches(   dataParser, train=True):
         # plt.show()
         # plt.savefig("temp_gt.png")
         yield (ims, [double_edge,band_gt, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8])
+
+
+
+def main():
+    args.cuda = True
+
+    # model
+    model1 = Net1()
+    model2 = Net2()
+    #############################
+
+    if torch.cuda.is_available():
+        model1.cuda()
+        model2.cuda()
+    else:
+        model1.cpu()
+        model2.cpu()
+
+    model1.apply(weights_init)
+    model2.apply(weights_init)
+    # 模型初始化
+    # 如果没有这一步会根据正态分布自动初始化
+    # model.apply(weights_init)
+
+    # 模型可持续化
+    # 这是tensorflow代码中的配置：    optimizer = Adam(lr=1e-2, beta_1=0.9, beta_2=0.999)
+    optimizer1 = optim.Adam(model1.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
+    optimizer2 = optim.Adam(model2.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
+
+
+    if args.resume:
+        if isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            model1.load_state_dict(checkpoint['state_dict'])
+            print("=> loaded checkpoint '{}'"
+                  .format(args.resume))
+            optimizer1.load_state_dict(checkpoint['optimizer'])
+
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
+
+    else:
+        print("=> no checkpoint found at '{}'".format(args.resume))
+
+
+    if True:
+        checkpoint = torch.load('/home/liu/chenhaoran/Mymodel/record823/1101checkpoint_epoch20.pth')
+        model1.load_state_dict(checkpoint['state_dict'])
+        # model.load_state_dict(torch.load('/home/liu/chenhaoran/Mymodel/record823/1031checkpoint_epoch6.pth'))
+        print('load sucess')
+
+
+
+    # 调整学习率
+    scheduler1 = lr_scheduler.StepLR(optimizer1, step_size=1e-4, gamma=args.gamma)
+    scheduler2 = lr_scheduler.StepLR(optimizer2, step_size=1e-2, gamma=args.gamma)
+
+    # 数据迭代器
+    dataParser = DataParser(args.batch_size)
+    for epoch in range(args.start_epoch, args.maxepoch):
+        tr_avg_loss, tr_avg_stage1,tr_avg_stage2,f1_stage1_avg,f1_stage2_avg = train(model1=model1,model2=model2 ,optimizer1=optimizer1,optimizer2 = optimizer2 ,dataParser = dataParser,epoch=epoch,
+                                            save_dir=args.model_save_dir,)
+
+       # val_avg_loss, val_detail_loss = val(model=model, epoch=epoch)
+        writer.add_scalar('tr_avg_loss_per_epoch', tr_avg_loss, global_step=epoch)
+        writer.add_scalar('tr_avg_loss_stage1_per_epoch', tr_avg_stage1, global_step=epoch)
+        writer.add_scalar('tr_avg_loss_stage2_per_epoch', tr_avg_stage2, global_step=epoch)
+        writer.add_scalar('tr_avg_f1_stage1_per_epoch', f1_stage1_avg, global_step=epoch)
+        writer.add_scalar('tr_avg_f1_stage2_per_epoch', f1_stage2_avg, global_step=epoch)
+        writer.add_scalar('lr_stage1_per_epoch', scheduler1.get_lr(), global_step=epoch)
+        writer.add_scalar('lr_stage2_per_epoch', scheduler2.get_lr(), global_step=epoch)
+        # writer.add_scalar('val_avg_loss_per_epoch', val_avg_loss, global_step=epoch)
+
+        # 保存模型
+        # if epoch%2 == 0:
+        #     save_file = os.path.join(args.model_save_dir, '1031checkpoint_epoch{}.pth'.format(epoch))
+        #     save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()},
+        #                     filename=save_file)
+        scheduler1.step()
+        scheduler2.step()
+
+    print('训练已完成!')
+
+
+""""""""""""""""""""""""""""""""""""
+"            训练代码               "
+""""""""""""""""""""""""""""""""""""
 
 
 def train(model1,model2, optimizer1,optimizer2, dataParser, epoch, save_dir):
@@ -390,6 +483,12 @@ def train(model1,model2, optimizer1,optimizer2, dataParser, epoch, save_dir):
 
     return losses.avg, stage1_loss.avg, stage2_loss.avg, f1_value_stage1.avg,f1_value_stage2.avg
 
+
+""""""""""""""""""""""""""""""""""""
+"            验证代码               "
+""""""""""""""""""""""""""""""""""""
+
+
 @torch.no_grad()
 def val(model, epoch):
     torch.cuda.empty_cache()
@@ -464,90 +563,6 @@ def val(model, epoch):
             break
 
     return losses.avg, epoch_loss
-
-
-def main():
-    args.cuda = True
-
-    # model
-    model1 = Net1()
-    model2 = Net2()
-    #############################
-
-    if torch.cuda.is_available():
-        model1.cuda()
-        model2.cuda()
-    else:
-        model1.cpu()
-        model2.cpu()
-
-    model1.apply(weights_init)
-    model2.apply(weights_init)
-    # 模型初始化
-    # 如果没有这一步会根据正态分布自动初始化
-    # model.apply(weights_init)
-
-    # 模型可持续化
-    # 这是tensorflow代码中的配置：    optimizer = Adam(lr=1e-2, beta_1=0.9, beta_2=0.999)
-    optimizer1 = optim.Adam(model1.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
-    optimizer2 = optim.Adam(model2.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
-
-
-    if args.resume:
-        if isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
-            model1.load_state_dict(checkpoint['state_dict'])
-            print("=> loaded checkpoint '{}'"
-                  .format(args.resume))
-            optimizer1.load_state_dict(checkpoint['optimizer'])
-
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
-
-
-    else:
-        print("=> no checkpoint found at '{}'".format(args.resume))
-
-
-    if True:
-        checkpoint = torch.load('/home/liu/chenhaoran/Mymodel/record823/1101checkpoint_epoch20.pth')
-        model1.load_state_dict(checkpoint['state_dict'])
-        # model.load_state_dict(torch.load('/home/liu/chenhaoran/Mymodel/record823/1031checkpoint_epoch6.pth'))
-        print('load sucess')
-
-
-
-    # 调整学习率
-    scheduler1 = lr_scheduler.StepLR(optimizer1, step_size=1e-4, gamma=args.gamma)
-    scheduler2 = lr_scheduler.StepLR(optimizer2, step_size=1e-2, gamma=args.gamma)
-
-    # 数据迭代器
-    dataParser = DataParser(args.batch_size)
-    for epoch in range(args.start_epoch, args.maxepoch):
-        tr_avg_loss, tr_avg_stage1,tr_avg_stage2,f1_stage1_avg,f1_stage2_avg = train(model1=model1,model2=model2 ,optimizer1=optimizer1,optimizer2 = optimizer2 ,dataParser = dataParser,epoch=epoch,
-                                            save_dir=args.model_save_dir,)
-
-       # val_avg_loss, val_detail_loss = val(model=model, epoch=epoch)
-        writer.add_scalar('tr_avg_loss_per_epoch', tr_avg_loss, global_step=epoch)
-        writer.add_scalar('tr_avg_loss_stage1_per_epoch', tr_avg_stage1, global_step=epoch)
-        writer.add_scalar('tr_avg_loss_stage2_per_epoch', tr_avg_stage2, global_step=epoch)
-        writer.add_scalar('tr_avg_f1_stage1_per_epoch', f1_stage1_avg, global_step=epoch)
-        writer.add_scalar('tr_avg_f1_stage2_per_epoch', f1_stage2_avg, global_step=epoch)
-        writer.add_scalar('lr_stage1_per_epoch', scheduler1.get_lr(), global_step=epoch)
-        writer.add_scalar('lr_stage2_per_epoch', scheduler2.get_lr(), global_step=epoch)
-        # writer.add_scalar('val_avg_loss_per_epoch', val_avg_loss, global_step=epoch)
-
-        # 保存模型
-        # if epoch%2 == 0:
-        #     save_file = os.path.join(args.model_save_dir, '1031checkpoint_epoch{}.pth'.format(epoch))
-        #     save_checkpoint({'epoch': epoch, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()},
-        #                     filename=save_file)
-        scheduler1.step()
-        scheduler2.step()
-
-    print('训练已完成!')
-
 
 
 if __name__ == '__main__':

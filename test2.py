@@ -22,11 +22,12 @@ from os.path import join, split, isdir, isfile, splitext, split, abspath, dirnam
 from utils import to_none_class_map
 device = torch.device("cpu")
 
-def read_test_data():
+def read_test_data(output_path):
     try:
         image_name = os.listdir(test_data_path)
-        for name in image_name:
-            print(image_name)
+        length = len(image_name)
+        for index,name in enumerate(image_name):
+            print(index,'/',length)
             # name = 'Default_78_398895_clock.png'
             # gt_name = name.replace('Default','Gt')
             # gt_name = gt_name.replace('png','bmp')
@@ -68,7 +69,7 @@ def read_test_data():
             img = img[np.newaxis,:,:,:]
             img = torch.from_numpy(img)
             img = img.cpu()
-            print(img.shape)
+            # print(img.shape)
             output = model(img)
             output = output[0]
 
@@ -85,21 +86,21 @@ def read_test_data():
             # gt_ = torch.from_numpy(gt_)
             # loss = wce_huber_loss(output_,gt_)
             # print(loss)
-            plt.figure('prediction')
-            plt.imshow(output_)
-            plt.show()
+            # plt.figure('prediction')
+            # plt.imshow(output_)
+            # plt.show()
             output = np.array(output_)*255
             output = np.asarray(output,dtype='uint8')
             # output_img = Image.fromarray(output)
             # output_img.save(output_path + 'output_'+name)
-            cv.imwrite(output_path + 'output_'+name,output)
+            cv.imwrite(os.path.join(output_path,'output_'+name),output)
     except Exception as e:
         traceback.print_exc()
         print(e)
 
 class Helper():
-    def __init__(self,test_src_dir = '/media/liu/File/少量调试数据2/debug_src',
-                 test_gt_dir ='/media/liu/File/少量调试数据2/debug_gt'):
+    def __init__(self,test_src_dir = '/media/liu/File/Sp_320_dataset/tamper_result_320',
+                 test_gt_dir ='/media/liu/File/Sp_320_dataset/ground_truth_result_320'):
         self.test_src_dir = test_src_dir
         self.test_gt_dir = test_gt_dir
         pass
@@ -123,19 +124,19 @@ class Helper():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/media/liu/File/10月数据准备/blurtest'
-        output_path = 'test_record/test_blur'
+        test_data_path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
+        output_path = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_data/pred'
         if os.path.exists(output_path):
             pass
         else:
             os.mkdir(output_path)
-        model_path = '/home/liu/chenhaoran/Mymodel/record823/1101checkpoint_epoch28.pth'
+        model_path = '/home/liu/chenhaoran/Mymodel/record823/checkpoint12-stage1-0.002623-f10.795983-precision0.959493-acc0.992073-recall0.693299.pth'
         checkpoint = torch.load(model_path,map_location=torch.device('cpu'))
         model = Net().to(device)
         # model = torch.load(model_path)
         model.load_state_dict(checkpoint['state_dict'])
         model.eval()
-        read_test_data()
+        read_test_data(output_path)
     except Exception as e:
         traceback.print_exc()
         print(e)

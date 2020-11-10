@@ -703,29 +703,28 @@ class DataAugment():
 class MixData():
     def __init__(self):
 
-        # src_path_list = [ '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
-            # '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20']
-                         # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-                         # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src',
-        src_path_list = [ '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
-                          '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-                        '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
+        src_path_list = [ '/media/liu/File/Sp_320_dataset/tamper_result_320',
+                         '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+                         '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26']
+        # src_path_list = [ '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
+        #                   '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+        #                 '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
                         # '/media/liu/File/Sp_320_dataset/tamper_result_320',
-                        # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'
-                         ]
+                        # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'train_dataset_train_percent_0.80@8_26
+                        #  ]
         gt_path_list = []
         self.src_path_list = src_path_list
 
-        self.sp_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/splicing/ground_truth_result_320'
-        # self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
+        # self.sp_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/splicing/ground_truth_result_320'
+        self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
         # self.sp_gt_path = '/media/liu/File2/ground_truth_result_320'
-        self.cm_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_gt_train_percent_0.80@8_20'
+        self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
         self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
 
         # if True:
-        #     self.src_path_list = ['/media/liu/File/少量调试数据2/debug_src']
-        #     self.cm_gt_path = '/media/liu/File/少量调试数据2/debug_gt'
+        #     self.src_path_list = ['/media/liu/File/debug_data/tamper_result']
+        #     self.cm_gt_path = '/media/liu/File/debug_data/ground_truth_result'
 
     def gen_dataset(self):
         """

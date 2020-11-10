@@ -861,6 +861,7 @@ def gen_band_gt(gt):
 
 
 
+
 def generate_minibatches(dataParser, train=True):
 
     while True:

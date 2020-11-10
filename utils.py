@@ -34,7 +34,6 @@ class Logger(object):
     self.console.close()
     if self.file is not None:
         self.file.close()
-
 class Averagvalue(object):
     """Computes and stores the average and current value"""
 
@@ -53,8 +52,22 @@ class Averagvalue(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def save_checkpoint(state, filename='checkpoint.pth'):
-    torch.save(state, filename)
+class MidResultSave:
+    def __init__(self):
+        pass
+    def train_mid_result(self):
+        # if abs(batch_index - dataParser.steps_per_epoch) == 50:
+        #     _output = outputs[0].cpu()
+        #     _output = _output.detach().numpy()
+        #     for i in range(2):
+        #         t = _output[i, :, :]
+        #         t = np.squeeze(t, 0)
+        #         t = t*255
+        #         t = np.array(t,dtype='uint8')
+        #         t = Image.fromarray(t)
+        #
+        #         t.save('the_midoutput_%d_%d'%(epoch,batch_index))
+        pass
 
 def load_pretrained(model, fname, optimizer=None):
     """
@@ -174,3 +187,36 @@ def to_none_class_map(dou_em):
     # dou_em = np.expand_dims(dou_em, 2)
     return dou_em
 
+
+
+import urllib, urllib.request, sys
+import ssl
+
+def send_msn(epoch,f1):
+    host = 'https://intlsms.market.alicloudapi.com'
+    path = '/comms/sms/sendmsgall'
+    method = 'POST'
+    appcode = '096729f5b41b4830aeaa742e0d90d80b'
+    querys = ''
+    bodys = {}
+    url = host + path
+
+    bodys['callbackUrl'] = '''http://test.dev.esandcloud.com'''
+    bodys['channel'] = '''0'''
+    bodys['mobile'] = '''+8613329825566'''
+    bodys['templateID'] = '''20201108001936'''
+    epoch = str(epoch)
+    f1 = str(f1)
+    bodys['templateParamSet'] = [epoch,f1]
+    post_data = urllib.parse.urlencode(bodys).encode("UTF8")
+    request = urllib.request.Request(url, post_data)
+    request.add_header('Authorization', 'APPCODE ' + appcode)
+    # 根据API的要求，定义相对应的Content-Type
+    request.add_header('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8')
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    response = urllib.request.urlopen(request, context=ctx)
+    content = response.read()
+    if (content):
+        print(content)
