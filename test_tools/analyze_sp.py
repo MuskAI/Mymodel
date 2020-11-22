@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 class Analyze():
     def __init__(self):
-        self.pred_dir = '/media/liu/File/10月数据准备/1108_数据测试/cm_train_data/pred'
+        self.pred_dir = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_data/pred'
         self.src_dir = '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20'
         self.gt_dir = '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_gt_train_percent_0.80@8_20'
         self.band_dir = '/media/liu/File/10月数据准备/1108_数据测试/cm_train_data/band'

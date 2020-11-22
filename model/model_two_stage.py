@@ -657,7 +657,7 @@ class Aspp_Stage_2(nn.Module):
         return x
 
 class Net_Stage_2(nn.Module):
-    def __init__(self, input_shape=(320, 320, 3)):
+    def __init__(self, input_shape=(320, 320, 6)):
         super(Net_Stage_2, self).__init__()
         self.input_shape = input_shape
 
@@ -678,7 +678,7 @@ class Net_Stage_2(nn.Module):
 
         # Step1: 对输入的图进行处理
         self.in_conv_bn_relu = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=7, padding_mode='replicate', padding=3),
+            nn.Conv2d(6, 64, kernel_size=7, padding_mode='replicate', padding=3),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
@@ -1217,7 +1217,7 @@ class CombineHelper():
         :param band_pred:
         :return:
         """
-        return rgb_img * band_pred
+        return torch.cat((rgb_img * band_pred,rgb_img,),1)
 
     def __two_stage_input_input_check(self, rgb_img, band_pred):
         pass

@@ -1,4 +1,4 @@
-from functions import my_precision_score, my_acc_score, my_recall_score, wce_huber_loss, my_f1_score
+from functions import my_precision_score, my_acc_score, my_recall_score, wce_huber_loss, my_f1_score,wce_dice_huber_loss
 import numpy as np
 import torch
 import pandas as pd
@@ -22,17 +22,24 @@ class Analyze:
         """
         pred_dir
         """
-        self.pred_dir = '/media/liu/File/10月数据准备/1108_数据测试/cm_train_data/pred'
-
-        self.src_dir = '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20'
-        self.gt_dir = '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_gt_train_percent_0.80@8_20'
+        self.pred_dir = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_data/1120stage_2_pred'
+        self.src_dir = '/media/liu/File/Sp_320_dataset/tamper_result_320'
+        self.gt_dir = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
         """
         save_dir
         """
-        self.save_band_dir = '/media/liu/File/10月数据准备/1108_数据测试/cm_train_data/band'
-        self.save_combine_dir = '/media/liu/File/10月数据准备/1108_数据测试/cm_train_data/combineImg'
-        self.save_excel_dir = '/media/liu/File/10月数据准备/1108_数据测试/cm_train_data/cm_test.xlsx'
+        self.save_band_dir = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_two_stage/edge2'
+        self.save_combine_dir = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_two_stage/combineImgedge2'
+        self.save_excel_dir = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_two_stage/sp_1120edgetest2.xlsx'
+        if os.path.exists(self.save_combine_dir):
+            pass
+        else:
+            os.mkdir(self.save_combine_dir)
 
+        if os.path.exists(self.save_band_dir):
+            pass
+        else:
+            os.mkdir(self.save_band_dir)
     def analyze_all(self):
         """
 
@@ -49,7 +56,7 @@ class Analyze:
         pred_list = os.listdir(path_dir)
         fileNumber=len(pred_list)
         print('The number of images are: ', fileNumber)
-        rate=0.2
+        rate=1
         pickNumber=int(fileNumber*rate)
         sample=random.sample(pred_list,pickNumber)
 
@@ -66,6 +73,7 @@ class Analyze:
         combineArray = np.zeros((320, 4*320, 3))
 
         for index, name in enumerate(sample):
+            print(index,'/',len(sample))
             src_path, gt_path = Analyze.__find_src_and_gt(self, name)
             pred_img = os.path.join(path_dir, name)
             pred_img = Image.open(pred_img)
@@ -93,6 +101,8 @@ class Analyze:
 
             # compute loss
             gt_ndarray = np.array(gt_img)
+            gt = gt_ndarray.copy()
+            gt = np.where((gt == 100) | (gt == 255), 1, 0)
             gt_ndarray3D = np.expand_dims(gt_ndarray, axis=2)
             gt_ndarray4D = gt_ndarray[np.newaxis, np.newaxis, :, :]
             band_gt_np = Analyze.__gen_band_gt(self, gt_ndarray4D)
@@ -106,12 +116,18 @@ class Analyze:
             gt_name = gt_path.split('/')[-1]
 
             band_gt_name = band_gt_prefix + gt_name
-            band_gt_img.save(os.path.join(self.band_dir, band_gt_name))
+            band_gt_img.save(os.path.join(self.save_band_dir, band_gt_name))
 
             band_gt_tensor = torch.from_numpy(band_gt_np)
 
+
             # compute loss,f1,acc,precision,recall
-            loss_tonsor = wce_huber_loss(pred_img_tensor, band_gt_tensor)
+            gt = torch.from_numpy(gt)
+            gt = gt.unsqueeze(0)
+            gt = gt.unsqueeze(0)
+            loss_tonsor = wce_dice_huber_loss(pred_img_tensor.float(), gt.float())
+
+            # loss_tonsor = wce_dice_huber_loss(pred_img_tensor.float(), band_gt_tensor.float())
             loss = loss_tonsor.item()
 
             f1_score = my_f1_score(pred_img_tensor, band_gt_tensor)
@@ -145,7 +161,7 @@ class Analyze:
             combineImg = Image.fromarray(combineArray.astype(np.uint8))
             combineImg_prefix = 'comb_'
             combineImg_name =combineImg_prefix + src_name
-            combineImg.save(os.path.join(self.combine_dir,combineImg_name))
+            combineImg.save(os.path.join(self.save_combine_dir,combineImg_name))
 
             # difficult top-k
         data = {
@@ -160,17 +176,18 @@ class Analyze:
             'acc': acc_list
         }
         test = pd.DataFrame(data)
-        test.to_excel()
+        test.to_excel(self.save_excel_dir)
 
     def __find_src_and_gt(self, name):
         """
         using pred name to find src and gt
         :return:src_path, gt_path
+        输出的名字：output_Sp_Default_34_445004_zebra -->
         """
-        pred_name = name
 
-        src_name = pred_name.replace('output_', '')
-        gt_name = pred_name.replace('output_Default', 'Gt').replace('jpg', 'bmp').replace('png', 'bmp').replace('output_poisson', 'Gt')
+        pred_name = name
+        src_name = pred_name.replace('output1_', '')
+        gt_name = pred_name.replace('output1_', '').replace('Default','Gt').replace('jpg', 'bmp').replace('png', 'bmp').replace('output_poisson', 'Gt')
         src_path = os.path.join(self.src_dir, src_name)
         gt_path = os.path.join(self.gt_dir, gt_name)
 

@@ -1,5 +1,6 @@
 import torch
 import torch.optim as optim
+import torch.utils.data.dataloader
 import numpy as np
 import os, sys
 import argparse
@@ -7,7 +8,7 @@ import time, datetime
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
     wce_huber_loss_8, my_recall_score, debug_ce, cross_entropy_loss, wce_dice_huber_loss
 from torch.nn import init
-from dataset import DataParser, gen_band_gt
+from datasets.dataloader import TamperDataset
 from model.model_812 import Net
 from PIL import Image
 import shutil
@@ -55,7 +56,7 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
 "/home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth"
-parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/record823//home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/record823/1111checkpoint8-stage1-0.296349-f10.863817-precision0.943144-acc0.995090-recall0.803569.pth', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result_823')
@@ -84,51 +85,7 @@ if not isdir(model_save_dir):
 
 # tensorboard 使用
 writer = SummaryWriter(
-    'runs/' + '1120_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
-
-
-def generate_minibatches(dataParser, train=True):
-    while True:
-        if train:
-            batch_ids = np.random.choice(dataParser.X_train, dataParser.batch_size)
-            ims, ems, double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8, chanel_fuse, edgemaps_4, edgemaps_8, edgemaps_16, _ = dataParser.get_batch(
-                batch_ids)
-        else:
-            batch_ids = np.random.choice(dataParser.X_test, dataParser.batch_size)
-            ims, ems, double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8, chanel_fuse, edgemaps_4, edgemaps_8, edgemaps_16, _ = dataParser.get_batch(
-                batch_ids, train=False)
-
-        # 通道位置转化
-        ims = ims.transpose(0, 3, 1, 2)
-        chanel1 = chanel1.transpose(0, 3, 1, 2)
-        chanel2 = chanel2.transpose(0, 3, 1, 2)
-        chanel3 = chanel3.transpose(0, 3, 1, 2)
-        chanel4 = chanel4.transpose(0, 3, 1, 2)
-        chanel5 = chanel5.transpose(0, 3, 1, 2)
-        chanel6 = chanel6.transpose(0, 3, 1, 2)
-        chanel7 = chanel7.transpose(0, 3, 1, 2)
-        chanel8 = chanel8.transpose(0, 3, 1, 2)
-        double_edge = double_edge.transpose(0, 3, 1, 2)
-
-        # 设置是否要使用条带
-        if True:
-            double_edge = gen_band_gt(double_edge)
-            pass
-        # ims_t = ims.transpose(0,1,2,3)
-        # plt.figure('ims')
-        # plt.imshow(ims[0,0,:,:]*255)
-        # plt.show()
-        #
-        # # plt.show()
-        # # plt.savefig("temp_ims.png")
-        #
-        # plt.figure('gt')
-        # plt.imshow(double_edge[0,0,:,:])
-        # plt.show()
-
-        # plt.show()
-        # plt.savefig("temp_gt.png")
-        yield (ims, [double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8])
+    'runs/' + '1111_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 
 
 """"""""""""""""""""""""""""""
@@ -139,7 +96,11 @@ def generate_minibatches(dataParser, train=True):
 def main():
     args.cuda = True
     # data
-    dataParser = DataParser(args.batch_size)
+    using_data = {'my_sp':True,'my_cm':False,'casia':False,'copy_move':False,'columb':False,'negative':False}
+    trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train')
+    valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val')
+    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size)
+    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size)
     # model
     model = Net()
     if torch.cuda.is_available():
@@ -177,8 +138,8 @@ def main():
     # 数据迭代器
 
     for epoch in range(args.start_epoch, args.maxepoch):
-        train_avg = train(model=model, optimizer=optimizer, dataParser=dataParser, epoch=epoch)
-        val_avg = val(model=model, dataParser=dataParser, epoch=epoch)
+        train_avg = train(model=model, optimizer=optimizer, dataParser=trainDataLoader, epoch=epoch)
+        val_avg = val(model=model, dataParser=valDataLoader, epoch=epoch)
 
         """"""""""""""""""""""""""""""
         "          写入图            "
@@ -212,7 +173,7 @@ def main():
                    'recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value)
 
         """
-        output_name = '1121checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
+        output_name = '1111checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
                                                                                                       val_avg['precision_avg'],
                                                                                                       val_avg['accuracy_avg'],
                                                                                                       val_avg['recall_avg'])
@@ -237,7 +198,8 @@ def main():
 
 def train(model, optimizer, dataParser, epoch):
     # 读取数据的迭代器
-    train_epoch = int(dataParser.steps_per_epoch)
+
+    train_epoch = len(dataParser)
     # 变量保存
     batch_time = Averagvalue()
     data_time = Averagvalue()
@@ -252,20 +214,24 @@ def train(model, optimizer, dataParser, epoch):
     model.train()
     end = time.time()
 
-    for batch_index, (images, labels_numpy) in enumerate(generate_minibatches(dataParser, True)):
+    for batch_index, input_data in enumerate(dataParser):
         # 读取数据的时间
         data_time.update(time.time() - end)
+        # 准备输入数据
+        images = input_data['tamper_image'].cuda()
+        labels = input_data['gt_band'].cuda()
+
 
         # 对读取的numpy类型数据进行调整
-        labels = []
-        if torch.cuda.is_available():
-            images = torch.from_numpy(images).cuda()
-            for item in labels_numpy:
-                labels.append(torch.from_numpy(item).cuda())
-        else:
-            images = torch.from_numpy(images)
-            for item in labels_numpy:
-                labels.append(torch.from_numpy(item))
+        # labels = []
+        # if torch.cuda.is_available():
+        #     images = torch.from_numpy(images).cuda()
+        #     for item in labels_numpy:
+        #         labels.append(torch.from_numpy(item).cuda())
+        # else:
+        #     images = torch.from_numpy(images)
+        #     for item in labels_numpy:
+        #         labels.append(torch.from_numpy(item))
 
         if torch.cuda.is_available():
             loss = torch.zeros(1).cuda()
@@ -292,23 +258,22 @@ def train(model, optimizer, dataParser, epoch):
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
 
-            if not args.band_mode:
-                # 如果不是使用band_mode 则需要计算8张图的loss
-                loss = wce_dice_huber_loss(outputs[0], labels[0]) * args.fuse_loss_weight
-
-                writer.add_scalar('fuse_loss_per_epoch', loss.item() / args.fuse_loss_weight,
-                                  global_step=epoch * train_epoch + batch_index)
-
-                for c_index, c in enumerate(outputs[1:]):
-                    one_loss_t = wce_dice_huber_loss(c, labels[c_index + 1])
-                    loss_8t += one_loss_t
-                    writer.add_scalar('%d_map_loss' % (c_index), one_loss_t.item(), global_step=train_epoch)
-                loss += loss_8t
-                loss = loss / 20
-            else:
-                loss = wce_dice_huber_loss(outputs[0], labels[0])
-                writer.add_scalar('fuse_loss_per_epoch', loss.item(),
-                                  global_step=epoch * train_epoch + batch_index)
+            # if not args.band_mode:
+            #     # 如果不是使用band_mode 则需要计算8张图的loss
+            #     loss = wce_dice_huber_loss(outputs[0], labels[0]) * args.fuse_loss_weight
+            #
+            #     writer.add_scalar('fuse_loss_per_epoch', loss.item() / args.fuse_loss_weight,
+            #                       global_step=epoch * train_epoch + batch_index)
+            #
+            #     for c_index, c in enumerate(outputs[1:]):
+            #         one_loss_t = wce_dice_huber_loss(c, labels[c_index + 1])
+            #         loss_8t += one_loss_t
+            #         writer.add_scalar('%d_map_loss' % (c_index), one_loss_t.item(), global_step=train_epoch)
+            #     loss += loss_8t
+            #     loss = loss / 20
+            loss = wce_dice_huber_loss(outputs[0], labels)
+            writer.add_scalar('fuse_loss_per_epoch', loss.item(),
+                              global_step=epoch * train_epoch + batch_index)
 
             loss.backward()
             optimizer.step()
@@ -320,10 +285,10 @@ def train(model, optimizer, dataParser, epoch):
         end = time.time()
 
         # 评价指标
-        f1score = my_f1_score(outputs[0], labels[0])
-        precisionscore = my_precision_score(outputs[0], labels[0])
-        accscore = my_acc_score(outputs[0], labels[0])
-        recallscore = my_recall_score(outputs[0], labels[0])
+        f1score = my_f1_score(outputs[0], labels)
+        precisionscore = my_precision_score(outputs[0], labels)
+        accscore = my_acc_score(outputs[0], labels)
+        recallscore = my_recall_score(outputs[0], labels)
 
         writer.add_scalar('f1_score', f1score, global_step=epoch * train_epoch + batch_index)
         writer.add_scalar('precision_score', precisionscore, global_step=epoch * train_epoch + batch_index)
@@ -337,7 +302,7 @@ def train(model, optimizer, dataParser, epoch):
         recall_value.update(recallscore)
 
         if batch_index % args.print_freq == 0:
-            info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.steps_per_epoch) + \
+            info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, train_epoch) + \
                    'Time {batch_time.val:.3f} (avg:{batch_time.avg:.3f}) '.format(batch_time=batch_time) + \
                    'Loss {loss.val:f} (avg:{loss.avg:f}) '.format(loss=losses) + \
                    'f1_score {f1.val:f} (avg:{f1.avg:f}) '.format(f1=f1_value) + \
@@ -360,7 +325,8 @@ def train(model, optimizer, dataParser, epoch):
 @torch.no_grad()
 def val(model, dataParser, epoch):
     # 读取数据的迭代器
-    train_epoch = int(dataParser.val_steps)
+    train_epoch = len(dataParser)
+
     # 变量保存
     batch_time = Averagvalue()
     data_time = Averagvalue()
@@ -375,20 +341,28 @@ def val(model, dataParser, epoch):
     model.eval()
     end = time.time()
 
-    for batch_index, (images, labels_numpy) in enumerate(generate_minibatches(dataParser, False)):
+    for batch_index, input_data in enumerate(dataParser):
         # 读取数据的时间
         data_time.update(time.time() - end)
 
-        # 对读取的numpy类型数据进行调整
-        labels = []
+        images = input_data['tamper_image']
+        labels = input_data['gt_band']
+
+
         if torch.cuda.is_available():
-            images = torch.from_numpy(images).cuda()
-            for item in labels_numpy:
-                labels.append(torch.from_numpy(item).cuda())
-        else:
-            images = torch.from_numpy(images)
-            for item in labels_numpy:
-                labels.append(torch.from_numpy(item))
+            images = images.cuda()
+            labels = labels.cuda()
+
+        # 对读取的numpy类型数据进行调整
+        # labels = []
+        # if torch.cuda.is_available():
+        #     images = torch.from_numpy(images).cuda()
+        #     for item in labels_numpy:
+        #         labels.append(torch.from_numpy(item).cuda())
+        # else:
+        #     images = torch.from_numpy(images)
+        #     for item in labels_numpy:
+        #         labels.append(torch.from_numpy(item))
 
         if torch.cuda.is_available():
             loss = torch.zeros(1).cuda()
@@ -412,23 +386,23 @@ def val(model, dataParser, epoch):
         "         Loss 函数           "
         """"""""""""""""""""""""""""""
 
-        if not args.band_mode:
-            # 如果不是使用band_mode 则需要计算8张图的loss
-            loss = wce_dice_huber_loss(outputs[0], labels[0]) * args.fuse_loss_weight
+        # if not args.band_mode:
+        #     # 如果不是使用band_mode 则需要计算8张图的loss
+        #     loss = wce_dice_huber_loss(outputs[0], labels) * args.fuse_loss_weight
+        #
+        #     writer.add_scalar('val_fuse_loss_per_epoch', loss.item() / args.fuse_loss_weight,
+        #                       global_step=epoch * train_epoch + batch_index)
+        #
+        #     for c_index, c in enumerate(outputs[1:]):
+        #         one_loss_t = wce_dice_huber_loss(c, labels[c_index + 1])
+        #         loss_8t += one_loss_t
+        #         writer.add_scalar('val_%d_map_loss' % (c_index), one_loss_t.item(), global_step=train_epoch)
+        #     loss += loss_8t
+        #     loss = loss / 20
 
-            writer.add_scalar('val_fuse_loss_per_epoch', loss.item() / args.fuse_loss_weight,
-                              global_step=epoch * train_epoch + batch_index)
-
-            for c_index, c in enumerate(outputs[1:]):
-                one_loss_t = wce_dice_huber_loss(c, labels[c_index + 1])
-                loss_8t += one_loss_t
-                writer.add_scalar('val_%d_map_loss' % (c_index), one_loss_t.item(), global_step=train_epoch)
-            loss += loss_8t
-            loss = loss / 20
-        else:
-            loss = wce_dice_huber_loss(outputs[0], labels[0])
-            writer.add_scalar('val_fuse_loss_per_epoch', loss.item(),
-                              global_step=epoch * train_epoch + batch_index)
+        loss = wce_dice_huber_loss(outputs[0], labels)
+        writer.add_scalar('val_fuse_loss_per_epoch', loss.item(),
+                          global_step=epoch * train_epoch + batch_index)
 
         # 将各种数据记录到专门的对象中
         losses.update(loss.item())
@@ -437,10 +411,10 @@ def val(model, dataParser, epoch):
         end = time.time()
 
         # 评价指标
-        f1score = my_f1_score(outputs[0], labels[0])
-        precisionscore = my_precision_score(outputs[0], labels[0])
-        accscore = my_acc_score(outputs[0], labels[0])
-        recallscore = my_recall_score(outputs[0], labels[0])
+        f1score = my_f1_score(outputs[0], labels)
+        precisionscore = my_precision_score(outputs[0], labels)
+        accscore = my_acc_score(outputs[0], labels)
+        recallscore = my_recall_score(outputs[0], labels)
 
         writer.add_scalar('val_f1_score', f1score, global_step=epoch * train_epoch + batch_index)
         writer.add_scalar('val_precision_score', precisionscore, global_step=epoch * train_epoch + batch_index)

@@ -704,8 +704,9 @@ class MixData():
     def __init__(self):
 
         src_path_list = [ '/media/liu/File/Sp_320_dataset/tamper_result_320',
-                         '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-                         '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26']
+                         # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+                         # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                          ]
         # src_path_list = [ '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
         #                   '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
         #                 '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
@@ -721,7 +722,7 @@ class MixData():
         self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
         self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
-
+        #
         # if True:
         #     self.src_path_list = ['/media/liu/File/debug_data/tamper_result']
         #     self.cm_gt_path = '/media/liu/File/debug_data/ground_truth_result'
@@ -817,6 +818,7 @@ class MixData():
 
 
         # 判断正确性
+
         if len(type) != 1:
             print('The type len is ', len(type))
             return ''
