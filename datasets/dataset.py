@@ -15,6 +15,7 @@ from PIL import ImageFile
 import traceback
 import cv2 as cv
 import sys
+from gen_8_map import gen_8_2_map
 import matplotlib.pyplot as plt
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 class DataParser():
@@ -64,10 +65,27 @@ class DataParser():
             # train data
             index = self.X_train_or_test.index(b)
             im = Image.open(self.X_train_or_test[index])
+            if im.size != (320, 320):
+                im = resize_to_320(im)
 
             # train gt
             dou_path = self.Y_train_or_test[index]
             dou_em = Image.open(dou_path)
+            if dou_em.size != (320, 320):
+                dou_em = np.array(dou_em, dtype='uint8')
+                dou_em = np.where(dou_em < 100,0,255)
+                dou_em = np.array(dou_em, dtype='uint8')
+                dou_em = Image.fromarray(dou_em)
+                dou_em = resize_to_320(dou_em)
+                dou_em = np.array(dou_em,dtype='uint8')
+                # dou_em = np.where(dou_em < 30, 0,dou_em)
+                # dou_em = np.where((dou_em < 80) & (dou_em >= 30), 50, dou_em)
+                # dou_em = np.where((dou_em < 150) & (dou_em >= 80), 100, dou_em)
+                # dou_em = np.where(dou_em >= 150,255, dou_em)
+                dou_em = np.where(dou_em < 100 ,0,255)
+                dou_em = np.array(dou_em, dtype='uint8')
+                dou_em = Image.fromarray(dou_em)
+
             if len(dou_em.split()) == 3:
                 dou_em = dou_em.split()[0]
                 # print('dim error')
@@ -461,6 +479,15 @@ class DataAugment():
     def __init__(self):
         pass
 
+
+
+    def _resize_to_320(self):
+        """
+        The input
+        :return:
+        """
+        pass
+
     def combine_augment_method(self, im, dou_em, relation_8_map, index):
         """
         基于彪哥给的代码做修改
@@ -703,16 +730,18 @@ class DataAugment():
 class MixData():
     def __init__(self):
 
-        src_path_list = [ '/media/liu/File/Sp_320_dataset/tamper_result_320',
-                         # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-                         # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
-                          ]
-        # src_path_list = [ '/media/liu/File/10月数据准备/10月12日实验数据/cm/test_dataset_train_percent_0.80@8_20',
-        #                   '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-        #                 '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
-                        # '/media/liu/File/Sp_320_dataset/tamper_result_320',
-                        # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'train_dataset_train_percent_0.80@8_26
-                        #  ]
+        # src_path_list = [ '/media/liu/File/Sp_320_dataset/tamper_result_320',
+        #                  # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+        #                  # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+        #                   ]
+        src_path_list = [
+                        # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26',
+                        # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+                        # '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
+                        '/media/liu/File/Sp_320_dataset/tamper_result_320',
+                        # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'
+                          '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/src'
+                         ]
         gt_path_list = []
         self.src_path_list = src_path_list
 
@@ -721,7 +750,7 @@ class MixData():
         # self.sp_gt_path = '/media/liu/File2/ground_truth_result_320'
         self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-        self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
+        self.casia_gt_path = '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/gt'
         #
         # if True:
         #     self.src_path_list = ['/media/liu/File/debug_data/tamper_result']
@@ -850,10 +879,9 @@ class MixData():
             return ''
 
         return gt_path
-
 def gen_band_gt(gt):
     """
-    01 mask 图省城边缘条带图
+    01 mask 图生成边缘条带图
     :param gt: 01 mask图 输入的是list dim 4 维，B C H W
     :return:list 01 边缘条带,list B C H W
     """
@@ -871,6 +899,58 @@ def gen_band_gt(gt):
         band_gt[i,:,:,:] = np.expand_dims(_band,0)
 
     return band_gt
+def resize_to_320(img):
+    """
+
+    :param img:
+    :return:
+    """
+
+    img = img.resize((320,320))
+    return img
+def generate_minibatches(dataParser, train=True):
+    while True:
+        if train:
+            batch_ids = np.random.choice(dataParser.X_train, dataParser.batch_size)
+            ims, ems, double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8, chanel_fuse, edgemaps_4, edgemaps_8, edgemaps_16, _ = dataParser.get_batch(
+                batch_ids)
+        else:
+            batch_ids = np.random.choice(dataParser.X_test, dataParser.batch_size)
+            ims, ems, double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8, chanel_fuse, edgemaps_4, edgemaps_8, edgemaps_16, _ = dataParser.get_batch(
+                batch_ids, train=False)
+
+        # 通道位置转化
+        ims = ims.transpose(0, 3, 1, 2)
+        chanel1 = chanel1.transpose(0, 3, 1, 2)
+        chanel2 = chanel2.transpose(0, 3, 1, 2)
+        chanel3 = chanel3.transpose(0, 3, 1, 2)
+        chanel4 = chanel4.transpose(0, 3, 1, 2)
+        chanel5 = chanel5.transpose(0, 3, 1, 2)
+        chanel6 = chanel6.transpose(0, 3, 1, 2)
+        chanel7 = chanel7.transpose(0, 3, 1, 2)
+        chanel8 = chanel8.transpose(0, 3, 1, 2)
+        double_edge = double_edge.transpose(0, 3, 1, 2)
+
+        # 设置是否要使用条带
+        if True:
+            double_edge = DataParser.gen_band_gt(double_edge)
+            pass
+        # ims_t = ims.transpose(0,1,2,3)
+        # plt.figure('ims')
+        # plt.imshow(ims[0,0,:,:]*255)
+        # plt.show()
+        #
+        # # plt.show()
+        # # plt.savefig("temp_ims.png")
+        #
+        # plt.figure('gt')
+        # plt.imshow(double_edge[0,0,:,:])
+        # plt.show()
+
+        # plt.show()
+        # plt.savefig("temp_gt.png")
+        yield (ims, [double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8])
+
 if __name__ == "__main__":
     # data = DataAugment()
     # data.debug_test()

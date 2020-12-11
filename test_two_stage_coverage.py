@@ -127,8 +127,8 @@ def read_test_data(output_path):
 
 
 class Helper():
-    def __init__(self, test_src_dir='/media/liu/File/10月数据准备/10月12日实验数据/casia/src',
-                 test_gt_dir='/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'):
+    def __init__(self, test_src_dir='/media/liu/File/save_forged/forged_img',
+                 test_gt_dir='/media/liu/File/save_forged/forged_mask'):
         self.test_src_dir = test_src_dir
         self.test_gt_dir = test_gt_dir
         pass
@@ -154,9 +154,9 @@ class Helper():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'
-        output_path = ['/media/liu/File/11月数据准备/测试/casia/1120stage_1_pred',
-                       '/media/liu/File/11月数据准备/测试/casia/1120stage_2_pred']
+        test_data_path = '/media/liu/File/save_forged/forged_img'
+        output_path = ['/media/liu/File/11月数据准备/测试/coverage/1128stage_1_pred',
+                       '/media/liu/File/11月数据准备/测试/coverage/1128stage_2_pred']
         if os.path.exists(output_path[0]):
             pass
         else:

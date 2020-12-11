@@ -11,7 +11,7 @@ from torch.nn import init
 from datasets.dataset import DataParser
 
 from datasets.dataset import gen_band_gt
-from model.model_two_stage import Net_Stage_1 as Net1
+from model.model_two_stage import Net_Stage_1_SRM as Net1
 from model.model_two_stage import Net_Stage_2 as Net2
 import os, sys
 import numpy as np
@@ -58,8 +58,8 @@ parser.add_argument('--gpu', default='0', type=str,
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
-parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result_823')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model119')
+parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result/mid_result_band7_srm_1129')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/model_two_stage_srm_band7')
 parser.add_argument('--mid_result_index',type=list,help='mid_result_index',default=[0])
 parser.add_argument('--per_epoch_freq',type=int,help='per_epoch_freq',default=50)
 # ================ dataset
@@ -78,11 +78,11 @@ if not isdir(model_save_dir):
     os.makedirs(model_save_dir)
 
 # tensorboard 使用
-writer = SummaryWriter('runs/' + '1119_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
-two_stage_input_path = 'mid_result1119/two_stage_input'
-one_stage_input_path = 'mid_result1119/one_stage_input'
-two_stage_output_path = 'mid_result1119/two_stage_output'
-one_stage_output_path = 'mid_result1119/one_stage_output'
+writer = SummaryWriter('runs/' + 'srm_band7_two_stage_1129_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+two_stage_input_path = 'mid_result/mid_result_band7_srm_1129/two_stage_input'
+one_stage_input_path = 'mid_result/mid_result_band7_srm_1129/one_stage_input'
+two_stage_output_path = 'mid_result/mid_result_band7_srm_1129/two_stage_output'
+one_stage_output_path = 'mid_result/mid_result_band7_srm_1129/one_stage_output'
 _t_list = [two_stage_input_path,one_stage_output_path,one_stage_input_path,two_stage_output_path]
 for i in _t_list:
     if os.path.exists(os.path.join('/home/liu/chenhaoran/Mymodel',i)):
@@ -159,7 +159,7 @@ def main():
 
 
     if True:
-        checkpoint1 = torch.load('/home/liu/chenhaoran/Mymodel/record823/1111checkpoint8-stage1-0.296349-f10.863817-precision0.943144-acc0.995090-recall0.803569.pth')
+        checkpoint1 = torch.load('/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_srm_band7/1121checkpoint8-stage1-0.294457-f10.835947-precision0.959203-acc0.989555-recall0.748737.pth')
         model1.load_state_dict(checkpoint1['state_dict'])
         checkpoint2 = torch.load(
             '/home/liu/chenhaoran/Mymodel/save_model119/1119checkpoint0-stage2-0.237375-f10.716162-precision0.938563-acc0.994791-recall0.597392.pth')

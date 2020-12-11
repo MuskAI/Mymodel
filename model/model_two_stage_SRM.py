@@ -2,8 +2,49 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import OrderedDict
+import numpy as np
 from torchsummary import summary
 # from tensorboardX import SummaryWriter
+
+class SRMConv(nn.Module):
+    def __init__(self, channels=3, kernel='filter1'):
+        super(SRMConv, self).__init__()
+        self.channels = channels
+        q = [4.0, 12.0, 2.0]
+        filter1 = [[0, 0, 0, 0, 0],
+                   [0, -1, 2, -1, 0],
+                   [0, 2, -4, 2, 0],
+                   [0, -1, 2, -1, 0],
+                   [0, 0, 0, 0, 0]]
+        filter2 = [[-1, 2, -2, 2, -1],
+                   [2, -6, 8, -6, 2],
+                   [-2, 8, -12, 8, -2],
+                   [2, -6, 8, -6, 2],
+                   [-1, 2, -2, 2, -1]]
+        filter3 = [[0, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0],
+                   [0, 1, -2, 1, 0],
+                   [0, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0]]
+        filter1 = np.asarray(filter1, dtype=float) / q[0]
+        filter2 = np.asarray(filter2, dtype=float) / q[1]
+        filter3 = np.asarray(filter3, dtype=float) / q[2]
+        if kernel == 'filter1':
+            kernel = filter1
+        elif kernel =='filter2':
+            kernel = filter2
+        elif kernel == 'filter3':
+            kernel = filter3
+        else:
+            print('kernel error')
+            exit(0)
+        kernel = torch.FloatTensor(kernel).unsqueeze(0).unsqueeze(0)
+        kernel = np.repeat(kernel, self.channels, axis=0)
+        self.weight = nn.Parameter(data=kernel, requires_grad=False)
+
+    def __call__(self, x):
+        x = F.conv2d(x.unsqueeze(0), self.weight, padding=2, groups=self.channels)
+        return x
 
 
 class ResBlock_Stage_1(nn.Module):
@@ -112,7 +153,7 @@ class Net_Stage_1(nn.Module):
 
         # Step1: 对输入的图进行处理
         self.in_conv_bn_relu = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=7, padding_mode='replicate', padding=3),
+            nn.Conv2d(6, 64, kernel_size=7, padding_mode='replicate', padding=3),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
@@ -389,7 +430,12 @@ class Net_Stage_1(nn.Module):
         )
 
     def forward(self, x):
-        x = self.in_conv_bn_relu(x)
+
+        # step0: 加入了SRM
+        noise_3dim = SRMConv()(x)
+        src_noise = torch.cat((x,noise_3dim),1)
+
+        x = self.in_conv_bn_relu(src_noise)
         res_block = self.res_block1(x)
         res_block_shortcut = self.res_block1_shortcut(x)
         x = torch.add(res_block, res_block_shortcut)
@@ -657,7 +703,7 @@ class Aspp_Stage_2(nn.Module):
         return x
 
 class Net_Stage_2(nn.Module):
-    def __init__(self, input_shape=(320, 320, 3)):
+    def __init__(self, input_shape=(320, 320, 6)):
         super(Net_Stage_2, self).__init__()
         self.input_shape = input_shape
 
@@ -678,7 +724,7 @@ class Net_Stage_2(nn.Module):
 
         # Step1: 对输入的图进行处理
         self.in_conv_bn_relu = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=7, padding_mode='replicate', padding=3),
+            nn.Conv2d(6, 64, kernel_size=7, padding_mode='replicate', padding=3),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True)
@@ -1217,7 +1263,7 @@ class CombineHelper():
         :param band_pred:
         :return:
         """
-        return rgb_img * band_pred
+        return torch.cat((rgb_img * band_pred,rgb_img,),1)
 
     def __two_stage_input_input_check(self, rgb_img, band_pred):
         pass

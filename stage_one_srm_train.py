@@ -8,7 +8,7 @@ from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cr
     wce_huber_loss_8, my_recall_score, debug_ce, cross_entropy_loss, wce_dice_huber_loss
 from torch.nn import init
 from dataset import DataParser, gen_band_gt
-from model.model_812 import Net
+from model.model_stage1_SRM import Net
 from PIL import Image
 import shutil
 from torch.optim import lr_scheduler
@@ -33,7 +33,7 @@ parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
@@ -54,13 +54,13 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 50)')
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
-"/home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth"
-''
-parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_train/1207checkpoint13-stage1-0.303619-f10.447854-precision0.728201-acc0.961797-recall0.330388.pth', type=str, metavar='PATH',
+'/home/liu/chenhaoran/Mymodel/record823//home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth'
+
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
-parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/model_stage_one_casia_template_sp_train')
+parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result_823')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/model_stage_one_srm_band7')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -85,7 +85,7 @@ if not isdir(model_save_dir):
 
 # tensorboard 使用
 writer = SummaryWriter(
-    'runs/' + '1210_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+    'runs/' + '1128_band7_srm_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 
 
 def generate_minibatches(dataParser, train=True):
@@ -170,8 +170,7 @@ def main():
 
     else:
         print("=> no checkpoint found at '{}'".format(args.resume))
-        sys.exit()
-
+        print('start learning')
     # 调整学习率
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
@@ -213,7 +212,7 @@ def main():
                    'recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value)
 
         """
-        output_name = '1210checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
+        output_name = '1121checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
                                                                                                       val_avg['precision_avg'],
                                                                                                       val_avg['accuracy_avg'],
                                                                                                       val_avg['recall_avg'])
