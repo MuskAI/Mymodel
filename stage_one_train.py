@@ -56,7 +56,7 @@ parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
 "/home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth"
 ''
-parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_train/1207checkpoint13-stage1-0.303619-f10.447854-precision0.728201-acc0.961797-recall0.330388.pth', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_train/1210checkpoint3-stage1-0.308208-f10.466363-precision0.482113-acc0.976541-recall0.486830.pth', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
@@ -213,7 +213,7 @@ def main():
                    'recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value)
 
         """
-        output_name = '1210checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
+        output_name = '1211_casia_template_sp_negative_checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
                                                                                                       val_avg['precision_avg'],
                                                                                                       val_avg['accuracy_avg'],
                                                                                                       val_avg['recall_avg'])

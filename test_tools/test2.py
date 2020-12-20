@@ -8,6 +8,10 @@ from model.model_812 import Net
 import os, sys
 import numpy as np
 from PIL import Image
+import shutil
+import argparse
+import time
+import datetime
 import torch
 
 import matplotlib
@@ -17,7 +21,6 @@ from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss,wce
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 from utils import to_none_class_map
 device = torch.device("cpu")
-
 
 def read_test_data(output_path):
     try:
@@ -96,9 +99,8 @@ def read_test_data(output_path):
         print(e)
 
 class Helper():
-    def __init__(self,test_src_dir = '/media/liu/File/save_forged/forged_img',
-                 test_gt_dir ='/media/liu/File/save_forged/forged_mask'):
-        self.test_src_dir = test_src_dir
+    def __init__(self):
+        self.test_src_dir = test_data_path
         self.test_gt_dir = test_gt_dir
         pass
     def find_gt(self, src_path):
@@ -109,7 +111,8 @@ class Helper():
         :return: gt path
         """
         src_name = src_path.split('/')[-1]
-        gt_name = src_name.replace('Default','Gt').replace('png','bmp').replace('jpg','bmp')
+        # gt_name = src_name.replace('Default','Gt').replace('png','bmp').replace('jpg','bmp')
+        gt_name = src_name.split('.')[0] + '.bmp'
         gt_path = os.path.join(self.test_gt_dir,gt_name)
         if os.path.exists(gt_path):
             pass
@@ -121,13 +124,14 @@ class Helper():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/media/liu/File/save_forged/forged_img'
-        output_path = '/media/liu/File/11月数据准备/测试/coverage'
+        test_data_path = '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/src'
+        output_path = '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/pred2'
+        test_gt_dir = '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/gt'
         if os.path.exists(output_path):
             pass
         else:
             os.mkdir(output_path)
-        model_path = '/home/liu/chenhaoran/Mymodel/record823/checkpoint12-stage1-0.002623-f10.795983-precision0.959493-acc0.992073-recall0.693299.pth'
+        model_path = '/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_template_sp_train/1211_casia_template_sp_negative_checkpoint2-stage1-0.300310-f10.573517-precision0.824529-acc0.978754-recall0.456460.pth'
         checkpoint = torch.load(model_path,map_location=torch.device('cpu'))
         model = Net().to(device)
         # model = torch.load(model_path)

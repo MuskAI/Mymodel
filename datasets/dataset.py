@@ -174,7 +174,11 @@ class DataParser():
             images.append(im)
             filenames.append(self.X_train_or_test[index])
 
-        images = np.asarray(images)
+        try:
+            images = np.asarray(images)
+        except Exception as e:
+            print(dou_path)
+            exit(1)
         double_edge = np.asarray(double_edge)
         edgemaps_4 = np.asarray(edgemaps_4)
         edgemaps_8 = np.asarray(edgemaps_8)
@@ -736,21 +740,21 @@ class MixData():
         #                   ]
         src_path_list = [
                         # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26',
-                        # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-                        # '/media/liu/File/10月数据准备/10月12日实验数据/splicing/tamper_result_320',
+                        '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
                         '/media/liu/File/Sp_320_dataset/tamper_result_320',
                         # '/media/liu/File/10月数据准备/10月12日实验数据/casia/src'
-                          '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/src'
+                          '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/src',
+                        '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/src'
                          ]
         gt_path_list = []
         self.src_path_list = src_path_list
 
         # self.sp_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/splicing/ground_truth_result_320'
         self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
-        # self.sp_gt_path = '/media/liu/File2/ground_truth_result_320'
         self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
         self.casia_gt_path = '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/gt'
+        self.template_gt_path = '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/gt'
         #
         # if True:
         #     self.src_path_list = ['/media/liu/File/debug_data/tamper_result']
@@ -822,6 +826,7 @@ class MixData():
         negative_type = ['negative']
         CASIA_type = ['Tp']
         debug_type = ['debug']
+        template_type = ['TEMPLATE']
         type= []
         name = path.split('/')[-1]
         # name = path.split('\\')[-1]
@@ -841,10 +846,14 @@ class MixData():
                 break
 
         for CASIA_flag in CASIA_type:
-            if CASIA_flag in name[:2]:
+            if CASIA_flag in name[:2] and 'TEMPLATE' not in path:
                 type.append('casia')
                 break
 
+        for template_flag in template_type:
+            if template_flag in path:
+                type.append('template')
+                break
 
         # 判断正确性
 
@@ -867,6 +876,10 @@ class MixData():
         elif type[0] == 'casia':
             gt_path = name.split('.')[0] + '_gt' + '.png'
             gt_path = os.path.join(self.casia_gt_path, gt_path)
+            pass
+        elif type[0] == 'template':
+            gt_path = name.split('.')[0] + '.bmp'
+            gt_path = os.path.join(self.template_gt_path, gt_path)
             pass
         else:
             traceback.print_exc()

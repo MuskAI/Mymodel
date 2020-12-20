@@ -28,7 +28,7 @@ def wce_dice_huber_loss(pred, gt):
     loss1 = cross_entropy_loss(pred, gt)
     loss2 = DiceLoss()(pred, gt)
     loss3 = smooth_l1_loss(pred, gt)
-    return 0.6 * loss1 + 0.3 * loss2 + 0.1 * loss3
+    return 0.6 * loss1 + 0.15 * loss2 + 0.15 * loss3
 
 
 

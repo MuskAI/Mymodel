@@ -54,6 +54,16 @@ def read_test_data(output_path):
             # gt_ = np.array(gt,dtype='float32')
 
             img = Image.open(image_path)
+            # resize 的方式
+            if img.size != (320, 320):
+                # try:
+                #     img = Image.fromarray(img)
+                # except Exception as e:
+                #     print(e)
+                #     continue
+                img = img.resize((320,320))
+                img = np.array(img,dtype='uint8')
+
             img = np.array(img,dtype='float32')
             R_MEAN = img[:,:,0].mean()
             G_MEAN = img[:,:,1].mean()
@@ -99,8 +109,8 @@ def read_test_data(output_path):
         print(e)
 
 class Helper():
-    def __init__(self,test_src_dir = '/media/liu/File/Sp_320_dataset/tamper_result_320',
-                 test_gt_dir ='/media/liu/File/Sp_320_dataset/ground_truth_result_320'):
+    def __init__(self,test_src_dir = '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/src',
+                 test_gt_dir ='/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/gt'):
         self.test_src_dir = test_src_dir
         self.test_gt_dir = test_gt_dir
         pass
@@ -112,8 +122,10 @@ class Helper():
         :return: gt path
         """
         src_name = src_path.split('/')[-1]
-        gt_name = src_name.replace('Default','Gt').replace('png','bmp').replace('jpg','bmp')
+        # gt_name = src_name.replace('Default','Gt').replace('png','bmp').replace('jpg','bmp')
+        gt_name = src_name.split('.')[0] + '_gt.png'
         gt_path = os.path.join(self.test_gt_dir,gt_name)
+
         if os.path.exists(gt_path):
             pass
         else:
@@ -124,13 +136,13 @@ class Helper():
 
 if __name__ == '__main__':
     try:
-        test_data_path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
-        output_path = '/media/liu/File/10月数据准备/1108_数据测试/sp_train_data/pred'
+        test_data_path = '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/src'
+        output_path = '/media/liu/File/11月数据准备/1211测试/casia_train_data/pred'
         if os.path.exists(output_path):
             pass
         else:
             os.mkdir(output_path)
-        model_path = '/home/liu/chenhaoran/Mymodel/record823/checkpoint12-stage1-0.002623-f10.795983-precision0.959493-acc0.992073-recall0.693299.pth'
+        model_path = '/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_template_sp_train/1210checkpoint10-stage1-0.307417-f10.471496-precision0.486202-acc0.976723-recall0.488201.pth'
         checkpoint = torch.load(model_path,map_location=torch.device('cpu'))
         model = Net().to(device)
         # model = torch.load(model_path)

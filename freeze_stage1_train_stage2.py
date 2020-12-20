@@ -58,8 +58,8 @@ parser.add_argument('--gpu', default='0', type=str,
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
-parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result/mid_result_band7_srm_1129')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/model_two_stage_srm_band7')
+parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result/mid_result_band5_1219')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/1219_model_two_stage_band5_template_data')
 parser.add_argument('--mid_result_index',type=list,help='mid_result_index',default=[0])
 parser.add_argument('--per_epoch_freq',type=int,help='per_epoch_freq',default=50)
 # ================ dataset
@@ -78,7 +78,7 @@ if not isdir(model_save_dir):
     os.makedirs(model_save_dir)
 
 # tensorboard 使用
-writer = SummaryWriter('runs/' + 'srm_band7_two_stage_1129_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+writer = SummaryWriter('runs/' + '1219_two_stage_1219_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 two_stage_input_path = 'mid_result/mid_result_band7_srm_1129/two_stage_input'
 one_stage_input_path = 'mid_result/mid_result_band7_srm_1129/one_stage_input'
 two_stage_output_path = 'mid_result/mid_result_band7_srm_1129/two_stage_output'
