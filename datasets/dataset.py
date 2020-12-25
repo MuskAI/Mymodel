@@ -54,6 +54,7 @@ class DataParser():
         edgemaps_16 = []
         chanelfuse = []
         chanel = [[] for i in range(8)]
+        error_count = 0
         for idx, b in enumerate(batch):
             if train:
                 self.X_train_or_test = self.X_train
@@ -62,15 +63,22 @@ class DataParser():
                 self.X_train_or_test = self.X_test
                 self.Y_train_or_test = self.Y_test
 
-            # train data
-            index = self.X_train_or_test.index(b)
-            im = Image.open(self.X_train_or_test[index])
-            if im.size != (320, 320):
-                im = resize_to_320(im)
+            try:
+                # train data
+                index = self.X_train_or_test.index(b)
+                im = Image.open(self.X_train_or_test[index])
+                if im.size != (320, 320):
+                    im = resize_to_320(im)
 
-            # train gt
-            dou_path = self.Y_train_or_test[index]
-            dou_em = Image.open(dou_path)
+                # train gt
+                dou_path = self.Y_train_or_test[index]
+                dou_em = Image.open(dou_path)
+            except Exception as e:
+                error_count = error_count + 1
+                if error_count == 3:
+                    print(e)
+                    exit(0)
+                continue
             if dou_em.size != (320, 320):
                 dou_em = np.array(dou_em, dtype='uint8')
                 dou_em = np.where(dou_em < 100,0,255)
@@ -734,11 +742,7 @@ class DataAugment():
 class MixData():
     def __init__(self):
 
-        # src_path_list = [ '/media/liu/File/Sp_320_dataset/tamper_result_320',
-        #                  # '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
-        #                  # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
-        #                   ]
-        src_path_list = [
+        src_path_list1 = [
                         # '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26',
                         '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
                         '/media/liu/File/Sp_320_dataset/tamper_result_320',
@@ -746,15 +750,47 @@ class MixData():
                           '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/src',
                         '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/src'
                          ]
+
+
+        # 下面12/24增加COD10K和更多template数据的训练
+        src_path_list2 = [
+            # sp cm 各10000
+            '/media/liu/File/12月新数据/After_divide/coco_splicing_no_poisson_after_divide/train_src',
+            '/media/liu/File/12月新数据/After_divide/coco_cm_after_divide/train_src',
+            # template 各5000
+            '/media/liu/File/12月新数据/After_divide/casia_au_and_casia_template_after_divide/train_src',
+            '/media/liu/File/12月新数据/After_divide/coco_casia_template_after_divide/train_src',
+
+            # cod10k 3000 negative10000
+            '/media/liu/File/12月新数据/After_divide/COD10K_after_divide/train_src',
+            '/media/liu/File/10月数据准备/10月12日实验数据/negative/src',
+        ]
+
         gt_path_list = []
+        src_path_list = src_path_list2
         self.src_path_list = src_path_list
 
-        # self.sp_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/splicing/ground_truth_result_320'
-        self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
-        self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+
+
+        # 12/24 之前的代码
+        # self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
+        # self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+        # self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+        # self.casia_gt_path = '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/gt'
+        # self.template_gt_path = '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/gt'
+
+
+
+        # 12/24号之后的代码
+        self.sp_gt_path = '/media/liu/File/12月新数据/After_divide/coco_splicing_no_poisson_after_divide/train_gt'
+        self.cm_gt_path = '/media/liu/File/12月新数据/After_divide/coco_cm_after_divide/train_gt'
+
+        # template 后面第一个是基于的数据集，第二个是使用的template
+        self.template_casia_casia_gt_path = '/media/liu/File/12月新数据/After_divide/casia_au_and_casia_template_after_divide/train_gt'
+        self.template_coco_casia_gt_path = '/media/liu/File/12月新数据/After_divide/coco_casia_template_after_divide/train_gt'
+
+        self.COD10K_gt_path ='/media/liu/File/12月新数据/After_divide/COD10K_after_divide/train_gt'
         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-        self.casia_gt_path = '/media/liu/File/11月数据准备/CASIA2.0_DATA_FOR_TRAIN/gt'
-        self.template_gt_path = '/media/liu/File/11月数据准备/CASIA_TEMPLATE_TRAIN/gt'
         #
         # if True:
         #     self.src_path_list = ['/media/liu/File/debug_data/tamper_result']
@@ -826,7 +862,9 @@ class MixData():
         negative_type = ['negative']
         CASIA_type = ['Tp']
         debug_type = ['debug']
-        template_type = ['TEMPLATE']
+        template_coco_casia = ['coco_casia_template_after_divide']
+        template_casia_casia = ['casia_au_and_casia_template_after_divide']
+        COD10K_type = ['COD10K']
         type= []
         name = path.split('/')[-1]
         # name = path.split('\\')[-1]
@@ -845,16 +883,24 @@ class MixData():
                 type.append('negative')
                 break
 
-        for CASIA_flag in CASIA_type:
-            if CASIA_flag in name[:2] and 'TEMPLATE' not in path:
-                type.append('casia')
-                break
+        # for CASIA_flag in CASIA_type:
+        #     if CASIA_flag in name[:2] and 'TEMPLATE' not in path:
+        #         type.append('casia')
+        #         break
 
-        for template_flag in template_type:
+        for template_flag in template_casia_casia:
             if template_flag in path:
-                type.append('template')
+                type.append('TEMPLATE_CASIA_CASIA')
+                break
+        for template_flag in template_coco_casia:
+            if template_flag in path:
+                type.append('TEMPLATE_COCO_CASIA')
                 break
 
+        for COD10K_flag in COD10K_type:
+            if COD10K_flag in path:
+                type.append('COD10K')
+                break
         # 判断正确性
 
         if len(type) != 1:
@@ -873,14 +919,22 @@ class MixData():
             gt_path = 'negative_gt.bmp'
             gt_path = os.path.join(self.negative_gt_path, gt_path)
             pass
-        elif type[0] == 'casia':
-            gt_path = name.split('.')[0] + '_gt' + '.png'
-            gt_path = os.path.join(self.casia_gt_path, gt_path)
-            pass
-        elif type[0] == 'template':
+        # elif type[0] == 'casia':
+        #     gt_path = name.split('.')[0] + '_gt' + '.png'
+        #     gt_path = os.path.join(self.casia_gt_path, gt_path)
+        #     pass
+        elif type[0] == 'TEMPLATE_CASIA_CASIA':
             gt_path = name.split('.')[0] + '.bmp'
-            gt_path = os.path.join(self.template_gt_path, gt_path)
-            pass
+            gt_path = os.path.join(self.template_casia_casia_gt_path, gt_path)
+
+        elif type[0] == 'TEMPLATE_COCO_CASIA':
+            gt_path = name.split('.')[0] + '.bmp'
+            gt_path = os.path.join(self.template_coco_casia_gt_path, gt_path)
+
+        elif type[0] == 'COD10K':
+            gt_path = name.split('.')[0] + '.bmp'
+            gt_path = gt_path.replace('tamper', 'Gt')
+            gt_path = os.path.join(self.COD10K_gt_path, gt_path)
         else:
             traceback.print_exc()
             print('Error')

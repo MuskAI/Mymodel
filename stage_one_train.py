@@ -39,7 +39,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=3, type=int,
+parser.add_argument('--stepsize', default=4, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -54,13 +54,12 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 50)')
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
-"/home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth"
-''
-parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_train/1210checkpoint3-stage1-0.308208-f10.466363-precision0.482113-acc0.976541-recall0.486830.pth', type=str, metavar='PATH',
+
+parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_casia_template_sp_train/1211_casia_template_sp_negative_checkpoint28-stage1-0.151637-f10.713804-precision0.859841-acc0.987976-recall0.627347.pth', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/model_stage_one_casia_template_sp_train')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/stage1_template_cod10k_cm_sp_negative_train')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -83,10 +82,20 @@ model_save_dir = join(model_save_dir, args.model_save_dir)
 if not isdir(model_save_dir):
     os.makedirs(model_save_dir)
 
+
+""""""""""""""""""""""""""""""
+"    ↓↓↓↓需要修改的参数↓↓↓↓     "
+""""""""""""""""""""""""""""""
+
+
+
 # tensorboard 使用
 writer = SummaryWriter(
-    'runs/' + '1210_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
-
+    'runs/' + '1225_%d-%d_tensorboard_TEST' % (datetime.datetime.now().month, datetime.datetime.now().day))
+output_name_file_name = '1225_template_sp_negative_COD10K_checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth'
+""""""""""""""""""""""""""""""
+"    ↑↑↑↑需要修改的参数↑↑↑↑     "
+""""""""""""""""""""""""""""""
 
 def generate_minibatches(dataParser, train=True):
     while True:
@@ -131,7 +140,6 @@ def generate_minibatches(dataParser, train=True):
         # plt.savefig("temp_gt.png")
         yield (ims, [double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8])
 
-
 """"""""""""""""""""""""""""""
 "          程序入口            "
 """"""""""""""""""""""""""""""
@@ -172,9 +180,11 @@ def main():
         print("=> no checkpoint found at '{}'".format(args.resume))
         sys.exit()
 
-    # 调整学习率
+    # 调整学习率1
     scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
 
+    # 调整学习率2
+    # scheduler = lr_scheduler.ReduceLROnPlateau()
     # 数据迭代器
 
     for epoch in range(args.start_epoch, args.maxepoch):
@@ -213,10 +223,13 @@ def main():
                    'recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value)
 
         """
-        output_name = '1211_casia_template_sp_negative_checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
-                                                                                                      val_avg['precision_avg'],
-                                                                                                      val_avg['accuracy_avg'],
-                                                                                                      val_avg['recall_avg'])
+
+        output_name = output_name_file_name % \
+                      (epoch,val_avg['loss_avg'],
+                       val_avg['f1_avg'],
+                       val_avg['precision_avg'],
+                       val_avg['accuracy_avg'],
+                       val_avg['recall_avg'])
         try:
             send_msn(epoch,f1=val_avg['f1_avg'])
         except:
