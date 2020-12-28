@@ -2,6 +2,13 @@
 <project version="4">
   <component name="PublishConfigData" autoUpload="Always" serverName="liu@10.21.243.59:22" showNewOnSourceInSync="false">
     <serverData>
+      <paths name="liu@10.21.243.54:22">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="liu@10.21.243.59:22">
         <serverdata>
           <mappings>
@@ -31,6 +38,20 @@
         </serverdata>
       </paths>
       <paths name="root@47.100.93.196:22 (1)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@net.videojj.com:3798">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="root@net.videojj.com:54241">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />

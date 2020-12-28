@@ -110,7 +110,7 @@ class Aspp(nn.Module):
 
 
 class Net(nn.Module):
-    def __init__(self, input_shape=(320, 320, 3)):
+    def __init__(self, input_shape=(320,320,3)):
         super(Net, self).__init__()
         self.input_shape = input_shape
 
@@ -203,7 +203,7 @@ class Net(nn.Module):
         ######################################
 
         # Step6:Aspp和它下面的部分
-        self.aspp = Aspp(input_shape=(320, 320, 3), out_stride=16)
+        self.aspp = Aspp(input_shape=input_shape, out_stride=16)
 
         ####################################
 
@@ -547,8 +547,10 @@ class Net(nn.Module):
         # return [relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, relation_map_1, x]
 
 if __name__ == '__main__':
-    xx = torch.rand(2,3,320,320).cuda()
-    model = Net().cuda()
-    writer.add_graph(model,xx)
-    summary(model,(3,320,320))
+    device = torch.device("cpu")
+
+    xx = torch.rand(1,3,320,320).to(device)
+    model = Net(input_shape = (160,160,3)).to(device)
+    # writer.add_graph(model,xx)
+    summary(model,(3,160,160),device='cpu')
     print('ok')

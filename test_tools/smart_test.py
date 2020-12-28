@@ -4,11 +4,10 @@ time 1225
 description:
 希望通过这个文件实现比较智能的测试
 输入只需要是网络结构和模型文件，输出是一份分析报告
-1.
 """
 """
 created by haoran
-time 8-17
+time 12-26
 """
 import traceback
 from model import model

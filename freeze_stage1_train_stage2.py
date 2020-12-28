@@ -11,7 +11,7 @@ from torch.nn import init
 from datasets.dataset import DataParser
 
 from datasets.dataset import gen_band_gt
-from model.model_two_stage import Net_Stage_1_SRM as Net1
+from model.model_two_stage import Net_Stage_1 as Net1
 from model.model_two_stage import Net_Stage_2 as Net2
 import os, sys
 import numpy as np
@@ -30,7 +30,7 @@ from os.path import join, split, isdir, isfile, splitext, split, abspath, dirnam
 "             参数                  "
 """"""""""""""""""""""""""""""""""""
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=3, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=2, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
@@ -40,7 +40,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=10, type=int,
+parser.add_argument('--stepsize', default=5, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -59,7 +59,7 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result/mid_result_band5_1219')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/1219_model_two_stage_band5_template_data')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/1227_model_two_stage_band5_texture_data')
 parser.add_argument('--mid_result_index',type=list,help='mid_result_index',default=[0])
 parser.add_argument('--per_epoch_freq',type=int,help='per_epoch_freq',default=50)
 # ================ dataset
@@ -78,7 +78,7 @@ if not isdir(model_save_dir):
     os.makedirs(model_save_dir)
 
 # tensorboard 使用
-writer = SummaryWriter('runs/' + '1219_two_stage_1219_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+writer = SummaryWriter('runs/' + '1227_two_stage_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 two_stage_input_path = 'mid_result/mid_result_band7_srm_1129/two_stage_input'
 one_stage_input_path = 'mid_result/mid_result_band7_srm_1129/one_stage_input'
 two_stage_output_path = 'mid_result/mid_result_band7_srm_1129/two_stage_output'
@@ -159,17 +159,17 @@ def main():
 
 
     if True:
-        checkpoint1 = torch.load('/home/liu/chenhaoran/Mymodel/save_model/model_stage_one_srm_band7/1121checkpoint8-stage1-0.294457-f10.835947-precision0.959203-acc0.989555-recall0.748737.pth')
+        checkpoint1 = torch.load('/home/liu/chenhaoran/Mymodel/save_model/stage1_template_cod10k_cm_sp_negative_train/1225_template_sp_negative_COD10K_checkpoint14-stage1-0.149210-f10.847126-precision0.949220-acc0.991939-recall0.773940.pth')
         model1.load_state_dict(checkpoint1['state_dict'])
         checkpoint2 = torch.load(
-            '/home/liu/chenhaoran/Mymodel/save_model119/1119checkpoint0-stage2-0.237375-f10.716162-precision0.938563-acc0.994791-recall0.597392.pth')
+            '/home/liu/chenhaoran/Mymodel/save_model/1219_model_two_stage_band5_template_data/1119checkpoint0-stage2-0.090607-f10.516883-precision0.851033-acc0.991605-recall0.409947.pth')
         model2.load_state_dict(checkpoint2['state_dict'])
 
         # model.load_state_dict(torch.load('/home/liu/chenhaoran/Mymodel/record823/1031checkpoint_epoch6.pth'))
         print('load sucess')
 
 
-    scheduler2 = lr_scheduler.StepLR(optimizer2, step_size=3, gamma=args.gamma)
+    scheduler2 = lr_scheduler.StepLR(optimizer2, step_size=5, gamma=args.gamma)
 
     # 数据迭代器
     dataParser = DataParser(args.batch_size)
