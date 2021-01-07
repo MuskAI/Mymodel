@@ -1,7 +1,6 @@
 import torch
 import torch.optim as optim
 import torch.utils.data.dataloader
-import numpy as np
 import os, sys
 import argparse
 import time, datetime
@@ -17,13 +16,14 @@ import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
 from utils import Logger, Averagvalue, weights_init, load_pretrained, save_mid_result,send_msn
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
-
+from check_image_pair import check_4dim_img_pair
 """
 Created by HaoRan
 time: 11/5
 description:
 1. stage one training
 """
+
 
 """"""""""""""""""""""""""""""
 "          参数               "
@@ -34,13 +34,13 @@ parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=3, type=int,
+parser.add_argument('--stepsize', default=4, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -55,19 +55,18 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 50)')
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
-"/home/liu/chenhaoran/Mymodel/record823/checkpoint9-stage1-0.002801-f10.790759-precision0.957186-acc0.992177-recall0.685567.pth"
-parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/record823/1111checkpoint8-stage1-0.296349-f10.863817-precision0.943144-acc0.995090-recall0.803569.pth', type=str, metavar='PATH',
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
-parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./mid_result_823')
-parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./record823')
+# parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
+parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
+parser.add_argument('--model_save_dir', type=str, help='model_save_dir', default='./save_model/stage1_0105_template_cod10k_cm_sp_negative_blur_train')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
 parser.add_argument('--fuse_loss_weight', type=int, help='fuse_loss_weight', default=12)
 # ================ dataset
 
-parser.add_argument('--dataset', help='root folder of dataset', default='dta/HED-BSD')
+# parser.add_argument('--dataset', help='root folder of dataset', default='dta/HED-BSD')
 parser.add_argument('--band_mode', help='weather using band of normal gt', type=bool, default=True)
 parser.add_argument('--save_mid_result', help='weather save mid result', type=bool, default=False)
 args = parser.parse_args()
@@ -83,9 +82,20 @@ model_save_dir = join(model_save_dir, args.model_save_dir)
 if not isdir(model_save_dir):
     os.makedirs(model_save_dir)
 
+
+""""""""""""""""""""""""""""""
+"    ↓↓↓↓需要修改的参数↓↓↓↓     "
+""""""""""""""""""""""""""""""
+
+
+
 # tensorboard 使用
 writer = SummaryWriter(
-    'runs/' + '1111_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+    'runs/' + '0105_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
+output_name_file_name = '0105_template_sp_negative_COD10K_checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth'
+""""""""""""""""""""""""""""""
+"    ↑↑↑↑需要修改的参数↑↑↑↑     "
+""""""""""""""""""""""""""""""
 
 
 """"""""""""""""""""""""""""""
@@ -95,12 +105,26 @@ writer = SummaryWriter(
 
 def main():
     args.cuda = True
-    # data
-    using_data = {'my_sp':True,'my_cm':False,'casia':False,'copy_move':False,'columb':False,'negative':False}
+    # 1 choose the data you want to use
+    using_data = {'my_sp': True,
+                  'my_cm': True,
+                  'template_casia_casia': True,
+                  'template_coco_casia': True,
+                  'cod10k': True,
+                  'casia': False,
+                  'copy_move': False,
+                  'columb': False,
+                  'negative_coco': True,
+                  'negative_casia': False,
+                  }
+    # 2 define 3 types
     trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train')
     valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val')
-    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size)
-    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size)
+
+    # 3 specific dataloader
+    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=3,shuffle=True,pin_memory=True)
+    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size,num_workers=3)
+
     # model
     model = Net()
     if torch.cuda.is_available():
@@ -130,11 +154,11 @@ def main():
 
     else:
         print("=> no checkpoint found at '{}'".format(args.resume))
-        sys.exit()
+
 
     # 调整学习率
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
-
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=args.stepsize, gamma=args.gamma)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer,'min',factor=0.5, patience=3, verbose=True)
     # 数据迭代器
 
     for epoch in range(args.start_epoch, args.maxepoch):
@@ -173,10 +197,12 @@ def main():
                    'recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value)
 
         """
-        output_name = '1111checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth' % (epoch,val_avg['loss_avg'],val_avg['f1_avg'],
-                                                                                                      val_avg['precision_avg'],
-                                                                                                      val_avg['accuracy_avg'],
-                                                                                                      val_avg['recall_avg'])
+        output_name = output_name_file_name % \
+                      (epoch,val_avg['loss_avg'],
+                       val_avg['f1_avg'],
+                       val_avg['precision_avg'],
+                       val_avg['accuracy_avg'],
+                       val_avg['recall_avg'])
         try:
             send_msn(epoch,f1=val_avg['f1_avg'])
         except:
@@ -217,10 +243,10 @@ def train(model, optimizer, dataParser, epoch):
     for batch_index, input_data in enumerate(dataParser):
         # 读取数据的时间
         data_time.update(time.time() - end)
+        # check_4dim_img_pair(input_data['tamper_image'],input_data['gt_band'])
         # 准备输入数据
         images = input_data['tamper_image'].cuda()
         labels = input_data['gt_band'].cuda()
-
 
         # 对读取的numpy类型数据进行调整
         # labels = []
@@ -325,7 +351,7 @@ def train(model, optimizer, dataParser, epoch):
 @torch.no_grad()
 def val(model, dataParser, epoch):
     # 读取数据的迭代器
-    train_epoch = len(dataParser)
+    val_epoch = len(dataParser)
 
     # 变量保存
     batch_time = Averagvalue()
@@ -402,7 +428,7 @@ def val(model, dataParser, epoch):
 
         loss = wce_dice_huber_loss(outputs[0], labels)
         writer.add_scalar('val_fuse_loss_per_epoch', loss.item(),
-                          global_step=epoch * train_epoch + batch_index)
+                          global_step=epoch * val_epoch + batch_index)
 
         # 将各种数据记录到专门的对象中
         losses.update(loss.item())
@@ -416,10 +442,10 @@ def val(model, dataParser, epoch):
         accscore = my_acc_score(outputs[0], labels)
         recallscore = my_recall_score(outputs[0], labels)
 
-        writer.add_scalar('val_f1_score', f1score, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('val_precision_score', precisionscore, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('val_acc_score', accscore, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('val_recall_score', recallscore, global_step=epoch * train_epoch + batch_index)
+        writer.add_scalar('val_f1_score', f1score, global_step=epoch * val_epoch + batch_index)
+        writer.add_scalar('val_precision_score', precisionscore, global_step=epoch * val_epoch + batch_index)
+        writer.add_scalar('val_acc_score', accscore, global_step=epoch * val_epoch + batch_index)
+        writer.add_scalar('val_recall_score', recallscore, global_step=epoch * val_epoch + batch_index)
         ################################
 
         f1_value.update(f1score)
@@ -428,7 +454,7 @@ def val(model, dataParser, epoch):
         recall_value.update(recallscore)
 
         if batch_index % args.print_freq == 0:
-            info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, dataParser.val_steps) + \
+            info = 'Epoch: [{0}/{1}][{2}/{3}] '.format(epoch, args.maxepoch, batch_index, val_epoch) + \
                    'Time {batch_time.val:.3f} (avg:{batch_time.avg:.3f}) '.format(batch_time=batch_time) + \
                    'vla_Loss {loss.val:f} (avg:{loss.avg:f}) '.format(loss=losses) + \
                    'val_f1_score {f1.val:f} (avg:{f1.avg:f}) '.format(f1=f1_value) + \
@@ -438,7 +464,7 @@ def val(model, dataParser, epoch):
 
             print(info)
 
-        if batch_index >= train_epoch:
+        if batch_index >= val_epoch:
             break
 
     return {'loss_avg': losses.avg,

@@ -107,7 +107,7 @@ class TestDataset:
         except Exception as e:
             traceback.print_exc()
             print(e)
-  def read_test_data(self):
+    def read_test_data(self):
         test_data_path = self.src_data_dir
 
         try:
