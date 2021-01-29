@@ -422,7 +422,6 @@ def generate_minibatches(dataParser, train=True):
             ims, ems, double_edge, chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8, chanel_fuse, edgemaps_4, edgemaps_8, edgemaps_16, _ = dataParser.get_batch(
                 batch_ids, train=False)
 
-        # datagen.flow()
         yield (ims, [chanel1, chanel2, chanel3, chanel4, chanel5, chanel6, chanel7, chanel8, ems, ems])
 
 

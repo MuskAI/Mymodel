@@ -224,12 +224,6 @@ class TemplateTest(TestDataset):
         # super(TestDataset, self).__init__(src_data_dir=os.path.join(self.src_data_dir,'test_src'), output_dir=self.src_data_test_output_dir)
 
 
-
-
-
-
-
-
 class CasiaTest(TestDataset):
     pass
 if __name__ == '__main__':

@@ -1,60 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="liu@10.21.243.59:22" showNewOnSourceInSync="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="liu@47.100.93.196:1154 password" showNewOnSourceInSync="false">
     <serverData>
-      <paths name="liu@10.21.243.54:22">
+      <paths name="liu@47.100.93.196:1154">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/liu/chenhaoran/Mymodel" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="liu@10.21.243.59:22">
+      <paths name="liu@47.100.93.196:1154 password">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/liu/chenhaoran/Mymodel" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/liu/chenhaoran/Mymodel" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="liu@10.21.243.59:22 password">
+      <paths name="章理登桌下54-阿里云穿透">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="liu@10.50.21.134:22">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/home/liu/chenhaoran/Mymodel_wkl" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@47.100.93.196:22">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@47.100.93.196:22 (1)">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@net.videojj.com:3798">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@net.videojj.com:54241">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/chenhaoran/Mymodel" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

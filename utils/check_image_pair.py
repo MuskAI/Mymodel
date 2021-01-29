@@ -12,11 +12,8 @@ def check_4dim_img_pair(img, gt):
     try:
         img = img.numpy().transpose(0,2,3,1)
         gt = gt.numpy().transpose(0,2,3,1)
-
         img_size = img.shape
-
         num_img = img_size[0]
-
         for i in range(num_img):
             _img = img[i]
             _gt = gt[i].squeeze(2)

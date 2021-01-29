@@ -10,7 +10,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import torchvision
-import torchvision
 from PIL import Image
 import time
 import os, sys
@@ -41,10 +40,10 @@ class TamperDataset(Dataset):
         # train val test mode
         self.train_val_test_mode = train_val_test_mode
         self.stage_type = stage_type
-
+        self.transform = transform
         # if the mode is train then split it to get val
         """train or test mode"""
-        if train_val_test_mode == 'train' or 'val':
+        if train_val_test_mode == 'train' or train_val_test_mode == 'val':
 
             train_val_src_list, train_val_gt_list = \
                 MixData(train_mode=True, using_data=using_data, device=device).gen_dataset()
@@ -77,10 +76,9 @@ class TamperDataset(Dataset):
         mode = self.train_val_test_mode
 
         # default mode
-        tamper_path = self.train_src_list[index]
-        gt_path = self.train_gt_list[index]
+        # tamper_path = self.train_src_list[index]
+        # gt_path = self.train_gt_list[index]
         if mode == 'train':
-
             tamper_path = self.train_src_list[index]
             gt_path = self.train_gt_list[index]
 
@@ -95,12 +93,14 @@ class TamperDataset(Dataset):
             gt_path = self.test_gt_list[index]
         else:
             traceback.print_exc('an error occur')
+
         # read img
         img = Image.open(tamper_path)
         gt = Image.open(gt_path)
         # check the src dim
-        if len(img.split())!=3:
-            rich.print(tamper_path,'error')
+        if len(img.split()) != 3 or img.size !=(320,320) or gt.size !=(320,320):
+            rich.print(tamper_path, 'error')
+            rich.print(gt_path)
         ##############################################
 
         # check the gt dim
@@ -112,38 +112,56 @@ class TamperDataset(Dataset):
             traceback.print_exc('gt dim error! please check it ')
         ##################################################
         try:
+            # 全部将下面的1 换成255
             gt_band = self.__gen_band(gt)
+            gt_dou_edge = self.__to_dou_edge(gt)
+            # 下面的relation_map还是01
+            relation_map = self.__gen_8_2_map(np.array(gt,dtype='uint8'))
+
         except Exception as e:
             print(e)
-            gt_band = gt
 
-        # if transform src
-        if self.transform:
-            img = self.transform(img)
+        if mode == 'train' or mode == 'val':
+            # if transform src
+            if self.transform:
+                img = self.transform(img)
+            else:
+
+                img = transforms.Compose([
+                    AddGlobalBlur(p=0.5),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.47, 0.43, 0.39), (0.27, 0.26, 0.27)),
+                ])(img)
+
+            # transform
+            gt_band = transforms.ToTensor()(gt_band)
+            gt_dou_edge = transforms.ToTensor()(gt_dou_edge)
+
+        elif mode == 'test':
+            # if transform src
+            if self.transform:
+                img = self.transform(img)
+            else:
+                img = transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.47, 0.43, 0.39), (0.27, 0.26, 0.27)),
+                ])(img)
+
+            # transform
+            gt_band = transforms.ToTensor()(gt_band)
+            gt_dou_edge = transforms.ToTensor()(gt_dou_edge)
+
         else:
-            # 3. 200张随机tamper_result
-            # normMean = [0.47258794, 0.43666607, 0.39043286]
-            # normStd = [0.27700597, 0.2695286, 0.27931225]
-
-            img = transforms.Compose([
-                AddGlobalBlur(p=0.5),
-                transforms.ToTensor(),
-                transforms.Normalize((0.47, 0.43, 0.39), (0.27, 0.26, 0.27)),
-            ])(img)
-
-        # transform
-        gt = transforms.ToTensor()(gt)
-        gt_band = transforms.ToTensor()(gt_band)
-
+            traceback.print_exc('the train_val_test mode is error')
         if self.stage_type == 'stage1':
-            sample = {'tamper_image': img, 'gt_band': gt_band}
-        else:
-            sample = {'tamper_image': img, 'gt_band': gt}
+            sample = {'tamper_image': img, 'gt_band': gt_band, 'path': {'src': tamper_path, 'gt': gt_path}}
+        elif self.stage_type == 'stage2':
+            sample = {'tamper_image': img, 'gt_band': gt_band, 'gt_dou_edge': gt_band,'relation_map':relation_map,
+                      'path': {'src': tamper_path, 'gt': gt_path}}
         return sample
 
     def __len__(self):
         mode = self.train_val_test_mode
-        length = len(self.train_src_list)
         if mode == 'train':
             length = len(self.train_src_list)
         elif mode == 'val':
@@ -192,6 +210,137 @@ class TamperDataset(Dataset):
         return _band
 
 
+    def __to_dou_edge(self,dou_em):
+        # 转化为无类别的GT 100 255 为边缘
+        dou_em = np.where(dou_em == 50, 0, dou_em)
+        dou_em = np.where(dou_em == 100, 1, dou_em)
+        return dou_em
+    def __gen_8_2_map(self, mask, mask_area=50, mask_edge=255, not_mask_edge=100):
+        """
+        输入mask，先按照固定参数标好，篡改区域、篡改区域边缘，非篡改区域边缘，非篡改区域
+        :param mask: 255 的图，channel数为1
+        :return: 从左上角的点开始按照顺时针方向的8张二通道的图
+        """
+        # 在输入mask 之前对mask进行检查
+        if type(mask) is np.ndarray:
+            if mask.ndim == 2:
+                pass
+            else:
+                # 如果输入的维度不是3二维的，则转化成2 dim
+                print('Notice: when using the function gen_8_2_map, the mask ndim is not 2 but', mask.ndim)
+                mask = mask[:,:,0]
+        else:
+            print('Notice: when using function gen_8_2_map, the input mask not numpy array')
+            traceback.print_exc()
+            sys.exit()
+
+        # 开始进行8张图的生成
+        relation_8_map = []
+        edge_loc_ = [1, 1]
+        # 找到内侧和外侧边缘
+        mask_pad = np.pad(mask, (1, 1), mode='constant')
+        mask_pad = np.where(mask_pad == 50, 0, mask_pad)
+        edge_loc = np.where(mask_pad == mask_edge)
+        edge_loc_1 = np.where(mask_pad == not_mask_edge)
+        edge_loc_[0] = np.append(edge_loc[0], edge_loc_1[0])
+        edge_loc_[1] = np.append(edge_loc[1], edge_loc_1[1])
+
+        del edge_loc_1
+        del edge_loc
+        edge_loc = edge_loc_
+        mask_shape = mask_pad.shape
+        # 生成8张结果图
+        for i in range(8):
+            temp = np.ones((mask_shape[0], mask_shape[1], 2))
+            relation_8_map.append(temp)
+
+        for j in range(len(edge_loc[0])):
+            row = edge_loc[0][j]
+            col = edge_loc[1][j]
+            if mask_pad[row - 1, col - 1] != 0:
+                relation_8_map[0][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row - 1, col - 1]:
+                    relation_8_map[0][row, col, 1] = 1
+                else:
+                    relation_8_map[0][row, col, 1] = 0
+            else:
+                relation_8_map[0][row, col, 0] = 0
+                relation_8_map[0][row, col, 1] = 0
+
+            if mask_pad[row - 1, col] != 0:
+                relation_8_map[1][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row - 1, col]:
+                    relation_8_map[1][row, col, 1] = 1
+                else:
+                    relation_8_map[1][row, col, 1] = 0
+            else:
+                relation_8_map[1][row, col, 0] = 0
+                relation_8_map[1][row, col, 1] = 0
+
+            if mask_pad[row - 1, col + 1] != 0:
+                relation_8_map[2][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row - 1, col + 1]:
+                    relation_8_map[2][row, col, 1] = 1
+                else:
+                    relation_8_map[2][row, col, 1] = 0
+            else:
+                relation_8_map[2][row, col, 0] = 0
+                relation_8_map[2][row, col, 1] = 0
+
+            if mask_pad[row, col + 1] != 0:
+                relation_8_map[3][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row, col + 1]:
+                    relation_8_map[3][row, col, 1] = 1
+                else:
+                    relation_8_map[3][row, col, 1] = 0
+            else:
+                relation_8_map[3][row, col, 0] = 0
+                relation_8_map[3][row, col, 1] = 0
+
+            if mask_pad[row + 1, col + 1] != 0:
+                relation_8_map[4][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row + 1, col + 1]:
+                    relation_8_map[4][row, col, 1] = 1
+                else:
+                    relation_8_map[4][row, col, 1] = 0
+            else:
+                relation_8_map[4][row, col, 0] = 0
+                relation_8_map[4][row, col, 1] = 0
+
+            if mask_pad[row + 1, col] != 0:
+                relation_8_map[5][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row + 1, col]:
+                    relation_8_map[5][row, col, 1] = 1
+                else:
+                    relation_8_map[5][row, col, 1] = 0
+            else:
+                relation_8_map[5][row, col, 0] = 0
+                relation_8_map[5][row, col, 1] = 0
+
+            if mask_pad[row + 1, col - 1] != 0:
+                relation_8_map[6][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row + 1, col - 1]:
+                    relation_8_map[6][row, col, 1] = 1
+                else:
+                    relation_8_map[6][row, col, 1] = 0
+            else:
+                relation_8_map[6][row, col, 0] = 0
+                relation_8_map[6][row, col, 1] = 0
+
+            if mask_pad[row, col - 1] != 0:
+                relation_8_map[7][row, col, 0] = 1
+                if mask_pad[row, col] == mask_pad[row, col - 1]:
+                    relation_8_map[7][row, col, 1] = 1
+                else:
+                    relation_8_map[7][row, col, 1] = 0
+            else:
+                relation_8_map[7][row, col, 0] = 0
+                relation_8_map[7][row, col, 1] = 0
+
+        for i in range(8):
+            relation_8_map[i] = relation_8_map[i][1:-1, 1:-1, :]
+            relation_8_map[i] = torch.from_numpy(relation_8_map[i].transpose((2,0,1)))
+        return relation_8_map
 class MixData:
     def __init__(self, train_mode=True, using_data=None, device='413'):
         """
@@ -230,7 +379,7 @@ class MixData:
                     print(t_gt_path, t_gt_path, 'unmatched')
                     unmatched_list.append([t_img_path, t_gt_path])
                     print('The process: %d/%d : %d/%d' % (
-                    index1 + 1, len(self.src_path_list), index2 + 1, len((os.listdir(item1)))))
+                        index1 + 1, len(self.src_path_list), index2 + 1, len((os.listdir(item1)))))
         print('The number of unmatched data is :', len(unmatched_list))
         print('The unmatched list is : ', unmatched_list)
 
@@ -248,6 +397,7 @@ class MixData:
         检查train_list 和 gt_list 是否有问题
         :return:
         """
+
         pass
 
     def __switch_case(self, path):
@@ -272,21 +422,23 @@ class MixData:
         cm_type = ['Default', 'poisson']
         negative_type = ['negative']
         CASIA_type = ['Tp']
-
+        COVERAGE_type = ['coverage']
         debug_type = ['debug']
         template_coco_casia = ['coco_casia_template_after_divide']
         template_casia_casia = ['casia_au_and_casia_template_after_divide']
         COD10K_type = ['COD10K']
+        texture_sp_type = ['texture_and_casia_template_divide']
+        texture_cm_type = ['no_periodic_texture_dataset']
         type = []
         name = path.split('/')[-1]
         # name = path.split('\\')[-1]
         for sp_flag in sp_type:
-            if sp_flag in name[:2]:
+            if sp_flag in name[:2] and 'texture' not in path:
                 type.append('sp')
                 break
 
         for cm_flag in cm_type:
-            if cm_flag in name[:7]:
+            if cm_flag in name[:7] and 'texture' not in path:
                 type.append('cm')
                 break
 
@@ -295,10 +447,10 @@ class MixData:
                 type.append('negative')
                 break
 
-        # for CASIA_flag in CASIA_type:
-        #     if CASIA_flag in name[:2] and 'TEMPLATE' not in path:
-        #         type.append('casia')
-        #         break
+        for CASIA_flag in CASIA_type:
+            if CASIA_flag in path and 'template' not in path:
+                type.append('CASIA')
+                break
 
         for template_flag in template_casia_casia:
             if template_flag in path:
@@ -312,6 +464,20 @@ class MixData:
         for COD10K_flag in COD10K_type:
             if COD10K_flag in path:
                 type.append('COD10K')
+                break
+
+        for COVERAGE_flag in COVERAGE_type:
+            if COVERAGE_flag in path:
+                type.append('COVERAGE')
+                break
+
+        for TEXUTURE_flag in texture_cm_type:
+            if TEXUTURE_flag in path:
+                type.append('TEXTURE_CM')
+                break
+        for TEXUTURE_flag in texture_sp_type:
+            if TEXUTURE_flag in path:
+                type.append('TEXTURE_SP')
                 break
         # 判断正确性
 
@@ -333,10 +499,10 @@ class MixData:
             gt_path = 'negative_gt.bmp'
             gt_path = os.path.join(self.negative_gt_path, gt_path)
             pass
-        # elif type[0] == 'casia':
-        #     gt_path = name.split('.')[0] + '_gt' + '.png'
-        #     gt_path = os.path.join(self.casia_gt_path, gt_path)
-        #     pass
+        elif type[0] == 'CASIA':
+            gt_path = name.split('.')[0] + '_gt' + '.png'
+            gt_path = os.path.join(self.casia_gt_path, gt_path)
+            pass
         elif type[0] == 'TEMPLATE_CASIA_CASIA':
             gt_path = name.split('.')[0] + '.bmp'
             gt_path = os.path.join(self.template_casia_casia_gt_path, gt_path)
@@ -349,6 +515,17 @@ class MixData:
             gt_path = name.split('.')[0] + '.bmp'
             gt_path = gt_path.replace('tamper', 'Gt')
             gt_path = os.path.join(self.COD10K_gt_path, gt_path)
+
+        elif type[0] == 'COVERAGE':
+            gt_path = name.split('.')[0] + '_gt.bmp'
+            gt_path = os.path.join(self.coverage_gt_path, gt_path)
+        elif type[0] == 'TEXTURE_CM':
+            gt_path = name.split('.')[0] + '.bmp'
+            gt_path = os.path.join(self.texture_cm_gt_path, gt_path)
+        elif type[0] == 'TEXTURE_SP':
+            gt_path = name.split('.')[0] + '.bmp'
+            gt_path = os.path.join(self.texture_sp_gt_path, gt_path)
+
         else:
             traceback.print_exc()
             print('Error')
@@ -458,7 +635,7 @@ class MixData:
             try:
                 if using_data['negative_coco']:
                     if train_mode:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                        path = '/media/liu/File/12月新数据/After_divide/texture_negative'
                         src_path_list.append(path)
                         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
                     else:
@@ -469,9 +646,9 @@ class MixData:
                 print(e)
 
             try:
-                if using_data['negative_casia']:
+                if using_data['negative_casia_texture']:
                     if train_mode:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                        path = '/media/liu/File/12月新数据/After_divide/texture_negative'
                         src_path_list.append(path)
                         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
                     else:
@@ -497,26 +674,26 @@ class MixData:
             try:
                 if using_data['texture_sp']:
                     if train_mode:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                        path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/train_src'
                         src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+                        self.texture_sp_gt_path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/train_gt'
                     else:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                        path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/test_src'
                         src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+                        self.texture_sp_gt_path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/test_gt'
             except Exception as e:
                 print(e)
 
             try:
                 if using_data['texture_cm']:
                     if train_mode:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                        path = '/media/liu/File/12月新数据/After_divide/no_periodic_texture_dataset0109/train_src'
                         src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+                        self.texture_cm_gt_path = '/media/liu/File/12月新数据/After_divide/no_periodic_texture_dataset0109/train_gt'
                     else:
                         path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
                         src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+                        self.texture_cm_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
             except Exception as e:
                 print(e)
 
@@ -537,13 +714,11 @@ class MixData:
             try:
                 if using_data['casia']:
                     if train_mode:
-                        path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
-                        src_path_list.append(path)
-                        self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
+                        pass
                     else:
                         path = '/media/liu/File/12月新数据/After_divide/casia/src'
                         src_path_list.append(path)
-                        self.casia_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/casia/gt'
+                        self.casia_gt_path = '/media/liu/File/12月新数据/After_divide/casia/gt'
 
             except Exception as e:
                 print(e)
@@ -551,16 +726,13 @@ class MixData:
 
             # public dataset
             try:
-                if using_data['copy_move']:
+                if using_data['coverage']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/coverage/src'
-                        src_path_list.append(path)
-                        self.casia_gt_path = '/media/liu/File/12月新数据/After_divide/coverage/gt'
-                        self.casia_gt_band_path = ''
+                        pass
                     else:
                         path = '/media/liu/File/12月新数据/After_divide/coverage/src'
                         src_path_list.append(path)
-                        self.casia_gt_path = '/media/liu/File/12月新数据/After_divide/coverage/gt'
+                        self.coverage_gt_path = '/media/liu/File/12月新数据/After_divide/coverage/gt'
 
             except Exception as e:
                 print(e)
@@ -583,7 +755,7 @@ class MixData:
 
 class AddGlobalBlur(object):
     """
-    增加全局模糊
+    增加全局模糊t
     """
 
     def __init__(self, p=1.0):
@@ -643,25 +815,45 @@ class AddEdgeBlur(object):
 if __name__ == '__main__':
 
     print('start')
-    mydataset = TamperDataset(using_data={'my_sp': False,
-                                          'my_cm': False,
-                                          'template_casia_casia':False,
-                                          'template_coco_casia':False,
-                                          'cod10k':False,
-                                          'casia': False,
-                                          'copy_move': False,
-                                          'columb': False,
-                                          'negative_coco': False,
-                                          'negative_casia':False,
-                                          }, train_val_test_mode='train')
-    dataloader = torch.utils.data.DataLoader(mydataset, batch_size=2, num_workers=4)
+    # mydataset = TamperDataset(using_data={'my_sp': False,
+    #                                       'my_cm': False,
+    #                                       'template_casia_casia': False,
+    #                                       'template_coco_casia': False,
+    #                                       'cod10k': False,
+    #                                       'casia': False,
+    #                                       'copy_move': False,
+    #                                       'columb': False,
+    #                                       'negative_coco': False,
+    #                                       'negative_casia': False,
+    #                                       }, train_val_test_mode='train')
+    mytestdataset = TamperDataset(using_data={'my_sp': False,
+                                              'my_cm': False,
+                                              'template_casia_casia': False,
+                                              'template_coco_casia': False,
+                                              'cod10k': False,
+                                              'casia': False,
+                                              'coverage': False,
+                                              'columb': False,
+                                              'negative_coco': False,
+                                              'negative_casia': False,
+                                              'texture_sp': False,
+                                              'texture_cm': True,
+                                              }, train_val_test_mode='train',stage_type='stage2')
+    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=5, num_workers=8)
     start = time.time()
-    for idx, item in enumerate(track(dataloader)):
-        # print(idx, type(item))
-        # print(item['tamper_image'].shape)
-        pass
-        # check_4dim_img_pair(item['tamper_image'], item['gt_band'])
-        # if idx == 3000:
-        #     break
+    try:
+        for idx, item in enumerate(track(dataloader)):
+            # print(idx, type(item))
+            print(item['relation_map'][0].shape)
+            if item['tamper_image'].shape[1] !=3 or item['tamper_image'].shape[2]!=320:
+                rich.print(item['path'])
+                time.sleep(1)
+
+            # check_4dim_img_pair(item['tamper_image'], item['gt_band'])
+            # if idx == 3000:
+            #     break
+    except Exception as e:
+        print(item['path'])
+        print(e)
     end = time.time()
     print('time :', end - start)

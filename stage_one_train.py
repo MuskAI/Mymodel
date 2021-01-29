@@ -460,6 +460,7 @@ def val(model, dataParser, epoch):
         writer.add_scalar('val_precision_score', precisionscore, global_step=epoch * train_epoch + batch_index)
         writer.add_scalar('val_acc_score', accscore, global_step=epoch * train_epoch + batch_index)
         writer.add_scalar('val_recall_score', recallscore, global_step=epoch * train_epoch + batch_index)
+
         ################################
 
         f1_value.update(f1score)
