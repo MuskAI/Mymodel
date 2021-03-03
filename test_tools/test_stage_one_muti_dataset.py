@@ -206,7 +206,7 @@ class TextureTest(TestDataset):
 
 
 class TemplateTest(TestDataset):
-    def __init__(self,src_data_dir = None, output_dir=None):
+    def __init__(self,src_data_dir=None, output_dir=None):
         self.src_data_dir = '/media/liu/File/12月新数据/After_divide/casia_au_and_casia_template_after_divide'
         self.src_data_output_dir = os.path.join(output_dir,'casia_au_and_casia_template_test')
         if not os.path.exists(self.src_data_output_dir):

@@ -10,8 +10,10 @@ from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cr
     wce_huber_loss_8, my_recall_score, debug_ce, cross_entropy_loss, wce_dice_huber_loss
 from torch.nn import init
 from datasets.dataloader import TamperDataset
-from model.model_two_stage import Net_Stage_1 as Net1
-from model.model_two_stage import Net_Stage_2 as Net2
+# from model.model_two_stage import Net_Stage_1 as Net1
+# from model.model_two_stage import Net_Stage_2 as Net2
+from model.unet_two_stage_model import UNetStage1 as Net1
+from model.unet_two_stage_model import UNetStage2 as Net2
 from PIL import Image
 import shutil
 from torchvision.utils import make_grid
@@ -39,9 +41,9 @@ parser.add_argument('--batch_size', default=2, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
-parser.add_argument('--resume', default=['/home/liu/chenhaoran/Mymodel/save_model/stage1_0119_template_cod10k_cm_sp_negative_texture_blur_train/0130_template_sp_negative_COD10K_texture_checkpoint7-stage1-0.296123-f10.727615-precision0.953630-acc0.982020-recall0.604378.pth',
+parser.add_argument('--resume', default=['/home/liu/chenhaoran/Mymodel/save_model/stage1_0119_template_cod10k_cm_sp_negative_texture_blur_train/0224_template_sp_negative_COD10K_texture_checkpoint9-stage1-0.294621-f10.706665-precision0.961146-acc0.974086-recall0.563570.pth',
                                          ''], type=list, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
@@ -49,7 +51,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=4, type=int,
+parser.add_argument('--stepsize', default=2, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -68,7 +70,7 @@ parser.add_argument('--gpu', default='0', type=str,
 # parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
-                    default='../save_model/stage2_0204_template_cod10k_cm_sp_negative_texture_blur_train')
+                    default='../save_model/stage1&2_0227_template_cod10k_cm_sp_negative_texture_blur_train')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -100,9 +102,9 @@ if not isdir(model_save_dir):
 # writer = SummaryWriter(
 #     'runs/' + '0105_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 writer = SummaryWriter(
-    '../runs/' + '0204_02-04_tensorboard_第二阶段单独训练')
+    '../runs/' + '0227_02-27_tensorboard_第二阶段联合训练_新的unet')
 email_header = 'Python'
-output_name_file_name = '0204_template_sp_negative_COD10K_texture_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
+output_name_file_name = '0227_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
 """"""""""""""""""""""""""""""
 "    ↑↑↑↑需要修改的参数↑↑↑↑     "
 """"""""""""""""""""""""""""""
@@ -116,28 +118,15 @@ email_list = []
 def main():
     args.cuda = True
     # 1 choose the data you want to use
-    # using_data = {'my_sp': False,
-    #               'my_cm': False,
-    #               'template_casia_casia': False,
-    #               'template_coco_casia': False,
-    #               'cod10k': True,
-    #               'casia': False,
-    #               'coverage': False,
-    #               'columb': False,
-    #               'negative_coco': False,
-    #               'negative_casia': False,
-    #               'texture_sp': False,
-    #               'texture_cm': False,
-    #               }
     using_data = {'my_sp': True,
                   'my_cm': True,
-                  'template_casia_casia': True,
-                  'template_coco_casia': True,
+                  'template_casia_casia': False,
+                  'template_coco_casia': False,
                   'cod10k': True,
                   'casia': False,
                   'coverage': False,
                   'columb': False,
-                  'negative_coco': True,
+                  'negative': False,
                   'negative_casia': False,
                   'texture_sp': True,
                   'texture_cm': True,
@@ -150,7 +139,7 @@ def main():
                        'casia': False,
                        'coverage': True,
                        'columb': False,
-                       'negative_coco': False,
+                       'negative': False,
                        'negative_casia': False,
                        }
     # 2 define 3 types
@@ -180,8 +169,8 @@ def main():
     model2.apply(weights_init)
 
     # 模型可持续化
-    # optimizer1 = optim.Adam(model1.parameters(), lr=1e-5, betas=(0.9, 0.999), eps=1e-8)
-    optimizer2 = optim.Adam(model2.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
+    optimizer1 = optim.Adam(model1.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-8)
+    optimizer2 = optim.Adam(model2.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
     if args.resume[0]:
         if isfile(args.resume[0]):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -202,13 +191,13 @@ def main():
         print("=> no checkpoint found at '{}'".format(args.resume))
 
     # 调整学习率
-    # scheduler1 = lr_scheduler.StepLR(optimizer1, step_size=args.stepsize, gamma=args.gamma)
+    scheduler1 = lr_scheduler.StepLR(optimizer1, step_size=args.stepsize, gamma=args.gamma)
     scheduler2 = lr_scheduler.StepLR(optimizer2, step_size=args.stepsize, gamma=args.gamma)
     # scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=3, verbose=True)
     # 数据迭代器
 
     for epoch in range(args.start_epoch, args.maxepoch):
-        train_avg = train(model1=model1, model2=model2, optimizer2=optimizer2,
+        train_avg = train(model1=model1, model2=model2,optimizer1=optimizer1, optimizer2=optimizer2,
                           dataParser=trainDataLoader, epoch=epoch)
 
         val_avg = val(model1=model1, model2=model2, dataParser=valDataLoader, epoch=epoch)
@@ -218,6 +207,8 @@ def main():
         "          写入图             "
         """"""""""""""""""""""""""""""
         try:
+            writer.add_scalars('lr_per_epoch', {'stage1':scheduler2.get_lr(),
+                                               'stage2':scheduler1.get_lr()}, global_step=epoch)
             writer.add_scalars('tr/val/test_avg_loss_per_epoch', {'train': train_avg['loss_avg'],
                                                                   'val': val_avg['loss_avg'],
                                                                   'test': test_avg['loss_avg']},
@@ -240,7 +231,6 @@ def main():
                                global_step=epoch)
 
 
-            writer.add_scalar('lr_per_epoch_stage2', scheduler2.get_lr(), global_step=epoch)
         except Exception as e:
             print(e)
 
@@ -256,32 +246,33 @@ def main():
                        val_avg['recall_avg_stage2'])
 
         try:
-            # send_msn(epoch, f1=val_avg['f1_avg'])
-            email_output_train = 'The train epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
-                                 (epoch, train_avg['loss_avg'], train_avg['f1_avg'], train_avg['precision_avg'],
-                                  train_avg['accuracy_avg'], train_avg['recall_avg'])
-            email_output_val = 'The val epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
-                               (epoch, val_avg['loss_avg'], val_avg['f1_avg'], val_avg['precision_avg'],
-                                val_avg['accuracy_avg'], val_avg['recall_avg'])
-            email_output_test = 'The test epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
-                                (epoch, test_avg['loss_avg'], test_avg['f1_avg'], test_avg['precision_avg'],
-                                 test_avg['accuracy_avg'], test_avg['recall_avg'])
-
-            email_output = email_output_train + '\n' + email_output_val + '\n' + email_output_test + '\n\n\n'
-            email_list.append(email_output)
-            send_email(str(email_header), context=str(email_list))
+            # # send_msn(epoch, f1=val_avg['f1_avg'])
+            # email_output_train = 'The train epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
+            #                      (epoch, train_avg['loss_avg'], train_avg['f1_avg'], train_avg['precision_avg'],
+            #                       train_avg['accuracy_avg'], train_avg['recall_avg'])
+            # email_output_val = 'The val epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
+            #                    (epoch, val_avg['loss_avg'], val_avg['f1_avg'], val_avg['precision_avg'],
+            #                     val_avg['accuracy_avg'], val_avg['recall_avg'])
+            # email_output_test = 'The test epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
+            #                     (epoch, test_avg['loss_avg'], test_avg['f1_avg'], test_avg['precision_avg'],
+            #                      test_avg['accuracy_avg'], test_avg['recall_avg'])
+            #
+            # email_output = email_output_train + '\n' + email_output_val + '\n' + email_output_test + '\n\n\n'
+            # email_list.append(email_output)
+            # send_email(str(email_header), context=str(email_list))
+            pass
 
         except:
             pass
         if epoch % 1 == 0:
-            # save_model_name_stage1 = os.path.join(args.model_save_dir, 'stage1' + output_name)
+            save_model_name_stage1 = os.path.join(args.model_save_dir, 'stage1' + output_name)
             save_model_name_stage2 = os.path.join(args.model_save_dir, 'stage2' + output_name)
-            # torch.save({'epoch': epoch, 'state_dict': model1.state_dict(), 'optimizer': optimizer1.state_dict()},
-            #            save_model_name_stage1)
+            torch.save({'epoch': epoch, 'state_dict': model1.state_dict(), 'optimizer': optimizer1.state_dict()},
+                       save_model_name_stage1)
             torch.save({'epoch': epoch, 'state_dict': model2.state_dict(), 'optimizer': optimizer2.state_dict()},
                        save_model_name_stage2)
 
-        # scheduler1.step(epoch=epoch)
+        scheduler1.step(epoch=epoch)
         scheduler2.step(epoch=epoch)
     print('训练已完成!')
 
@@ -291,7 +282,7 @@ def main():
 """"""""""""""""""""""""""""""
 
 
-def train(model1, model2, optimizer2, dataParser, epoch):
+def train(model1, model2, optimizer1,optimizer2, dataParser, epoch):
     # 读取数据的迭代器
 
     train_epoch = len(dataParser)
@@ -327,7 +318,6 @@ def train(model1, model2, optimizer2, dataParser, epoch):
         labels_band = input_data['gt_band'].cuda()
         labels_dou_edge = input_data['gt_dou_edge'].cuda()
         relation_map = input_data['relation_map']
-        image_path = input_data['path']
 
         if torch.cuda.is_available():
             loss = torch.zeros(1).cuda()
@@ -338,7 +328,7 @@ def train(model1, model2, optimizer2, dataParser, epoch):
 
         with torch.set_grad_enabled(True):
             images.requires_grad = True
-            # optimizer1.zero_grad()
+            optimizer1.zero_grad()
             optimizer2.zero_grad()
 
             if images.shape[1] != 3 or images.shape[2] != 320:
@@ -347,15 +337,14 @@ def train(model1, model2, optimizer2, dataParser, epoch):
 
             try:
                 one_stage_outputs = model1(images)
-            except:
-                print(images)
+            except Exception as e:
+                print(e)
+                print(images.shape)
                 continue
-            zero = torch.zeros_like(one_stage_outputs[0])
-            one = torch.ones_like(one_stage_outputs[0])
 
-            rgb_pred = images * torch.where(one_stage_outputs[0] > 0.1, one, zero)
+            rgb_pred = images * one_stage_outputs[0]
             rgb_pred_rgb = torch.cat((rgb_pred, images), 1)
-            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[9], one_stage_outputs[10], one_stage_outputs[11])
+            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
@@ -379,16 +368,15 @@ def train(model1, model2, optimizer2, dataParser, epoch):
             loss = loss_stage_2
             #######################################
             # 总的LOSS
-            writer.add_scalar('stage_one_loss', loss_stage_1.item(), global_step=epoch * train_epoch + batch_index)
-            writer.add_scalar('stage_two_pred_loss', _loss_stage_2.item(),
-                              global_step=epoch * train_epoch + batch_index)
-            writer.add_scalar('stage_two_fuse_loss', loss_stage_2.item(), global_step=epoch * train_epoch + batch_index)
-
-            writer.add_scalar('fuse_loss_per_epoch', loss.item(), global_step=epoch * train_epoch + batch_index)
+            # print(type(loss_stage_2.item()))
+            writer.add_scalars('loss_gather', {'stage_one_loss':loss_stage_1.item(),
+                                             'stage_two_pred_loss':_loss_stage_2.item(),
+                                             'stage_two_fuse_loss':loss_stage_2.item(),
+                                             'fuse_loss_per_epoch':loss.item()}, global_step=epoch * train_epoch + batch_index)
             ##########################################
 
             loss.backward()
-            # optimizer1.step()
+            optimizer1.step()
             optimizer2.step()
 
         # 将各种数据记录到专门的对象中
@@ -411,17 +399,14 @@ def train(model1, model2, optimizer2, dataParser, epoch):
         accscore_stage1 = my_acc_score(one_stage_outputs[0], labels_band)
         recallscore_stage1 = my_recall_score(one_stage_outputs[0], labels_band)
 
-        writer.add_scalar('f1_score_stage1', f1score_stage1, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('precision_score_stage1', precisionscore_stage1,
-                          global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('acc_score_stage1', accscore_stage1, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('recall_score_stage1', recallscore_stage1, global_step=epoch * train_epoch + batch_index)
-
-        writer.add_scalar('f1_score_stage2', f1score_stage2, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('precision_score_stage2', precisionscore_stage2,
-                          global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('acc_score_stage2', accscore_stage2, global_step=epoch * train_epoch + batch_index)
-        writer.add_scalar('recall_score_stage2', recallscore_stage2, global_step=epoch * train_epoch + batch_index)
+        writer.add_scalars('f1_score_stage', {'stage1':f1score_stage1,
+                                             'stage2':f1score_stage2}, global_step=epoch * train_epoch + batch_index)
+        writer.add_scalars('precision_score_stage', {'stage1':precisionscore_stage1,
+                                                     'stage2':precisionscore_stage2},global_step=epoch * train_epoch + batch_index)
+        writer.add_scalars('acc_score_stage', {'stage1':accscore_stage1,
+                                              'stage2':accscore_stage2}, global_step=epoch * train_epoch + batch_index)
+        writer.add_scalars('recall_score_stage', {'stage1':recallscore_stage1,
+                                                  'stage2':recallscore_stage2}, global_step=epoch * train_epoch + batch_index)
         ################################
 
         f1_value_stage1.update(f1score_stage1)
@@ -519,12 +504,9 @@ def val(model1, model2, dataParser, epoch):
             # 网络输出
             one_stage_outputs = model1(images)
 
-            zero = torch.zeros_like(one_stage_outputs[0])
-            one = torch.ones_like(one_stage_outputs[0])
-
-            rgb_pred = images * torch.where(one_stage_outputs[0] > 0.1, one, zero)
+            rgb_pred = images * one_stage_outputs[0]
             rgb_pred_rgb = torch.cat((rgb_pred, images), 1)
-            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[9], one_stage_outputs[10], one_stage_outputs[11])
+            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
@@ -686,12 +668,9 @@ def test(model1, model2, dataParser, epoch):
             # 网络输出
             one_stage_outputs = model1(images)
 
-            zero = torch.zeros_like(one_stage_outputs[0])
-            one = torch.ones_like(one_stage_outputs[0])
-
-            rgb_pred = images * torch.where(one_stage_outputs[0] > 0.1, one, zero)
+            rgb_pred = images * one_stage_outputs[0]
             rgb_pred_rgb = torch.cat((rgb_pred, images), 1)
-            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[9], one_stage_outputs[10], one_stage_outputs[11])
+            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
@@ -721,8 +700,7 @@ def test(model1, model2, dataParser, epoch):
                               global_step=epoch * test_epoch + batch_index)
             writer.add_scalar('test_stage_two_fuse_loss', loss_stage_2.item(),
                               global_step=epoch * test_epoch + batch_index)
-            print(one_stage_outputs[0].shape)
-            print(two_stage_outputs[0].shape)
+
             z = torch.cat((one_stage_outputs[0], two_stage_outputs[0]), 0)
             writer.add_image('one&two_stage_image_batch:%d' % (batch_index),
                              make_grid(z,nrow=2), global_step=epoch)

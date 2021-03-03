@@ -1,24 +1,28 @@
+"""
+@author: haoran
+tine : 2021-02-22
+description：
+这个file是使用标准的unet进行训练
+"""
+import os,sys
+sys.path.append('..')
+sys.path.append('../utils')
+
 import torch
 import torch.optim as optim
 import torch.utils.data.dataloader
-import os, sys
-sys.path.append('..')
-sys.path.append('../utils')
 import argparse
-import time, datetime
+import time
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
     wce_huber_loss_8, my_recall_score, debug_ce, cross_entropy_loss, wce_dice_huber_loss
-from torch.nn import init
 from datasets.dataloader import TamperDataset
-from model.model_812 import Net
-from PIL import Image
-import shutil
+from model.unet_model import UNet as Net
 from torch.optim import lr_scheduler
 import matplotlib.pyplot as plt
 from tensorboardX import SummaryWriter
-from utils import Logger, Averagvalue, weights_init, load_pretrained, save_mid_result, send_msn
+from utils import Averagvalue, weights_init, load_pretrained, save_mid_result, send_msn
 from send_email import SendMail as send_email
-from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
+from os.path import join, isdir, isfile, splitext, split, abspath, dirname
 # from check_image_pair import check_4dim_img_pair
 
 """
@@ -33,18 +37,18 @@ description:
 """"""""""""""""""""""""""""""
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=12, type=int, metavar='BT',
                     help='batch size')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
-                    default='../save_model/stage1_0119_template_cod10k_cm_sp_negative_texture_blur_train')
+                    default='../save_model/stage1_0227_template_cod10k_cm_sp_negative_texture_blur_train')
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=4, type=int,
+parser.add_argument('--stepsize', default=5, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -62,8 +66,6 @@ parser.add_argument('--gpu', default='0', type=str,
 #####################resume##########################
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
-# parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
-# parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
@@ -92,8 +94,8 @@ if not isdir(model_save_dir):
 """"""""""""""""""""""""""""""
 
 # tensorboard 使用
-writer = SummaryWriter('../runs/' + '0130_1-30_tensorboard_NoBlur')
-output_name_file_name = '0130_template_sp_negative_COD10K_texture_checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth'
+writer = SummaryWriter('../runs/' + '0227_tensorboard_std_unet_stage1')
+output_name_file_name = '0227_template_sp_negative_COD10K_texture_checkpoint%d-stage1-%f-f1%f-precision%f-acc%f-recall%f.pth'
 email_header = 'Python'
 """"""""""""""""""""""""""""""
 "    ↑↑↑↑需要修改的参数↑↑↑↑     "
@@ -109,13 +111,13 @@ def main():
     # 1 choose the data you want to use
     using_data = {'my_sp': True,
                   'my_cm': True,
-                  'template_casia_casia': True,
-                  'template_coco_casia': True,
+                  'template_casia_casia': False,
+                  'template_coco_casia': False,
                   'cod10k': True,
                   'casia': False,
                   'coverage': False,
                   'columb': False,
-                  'negative_coco': True,
+                  'negative': False,
                   'negative_casia': False,
                   'texture_sp': True,
                   'texture_cm': True,
@@ -128,7 +130,7 @@ def main():
                        'casia': False,
                        'coverage': True,
                        'columb': False,
-                       'negative_coco': False,
+                       'negative': False,
                        'negative_casia': False,
                        }
     # 2 define 3 types
@@ -137,9 +139,9 @@ def main():
     testData = TamperDataset(stage_type='stage1', using_data=using_data_test, train_val_test_mode='test')
 
     # 3 specific dataloader
-    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=3, shuffle=True,
+    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=4, shuffle=True,
                                                   pin_memory=True)
-    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size, num_workers=3)
+    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size, num_workers=4)
 
     testDataLoader = torch.utils.data.DataLoader(testData, batch_size=args.batch_size, num_workers=1)
     # model
@@ -188,25 +190,30 @@ def main():
         "          写入图            "
         """"""""""""""""""""""""""""""
         try:
-            writer.add_scalar('tr_avg_loss_per_epoch', train_avg['loss_avg'], global_step=epoch)
-            writer.add_scalar('tr_avg_f1_per_epoch', train_avg['f1_avg'], global_step=epoch)
-            writer.add_scalar('tr_avg_precision_per_epoch', train_avg['precision_avg'], global_step=epoch)
-            writer.add_scalar('tr_avg_acc_per_epoch', train_avg['accuracy_avg'], global_step=epoch)
-            writer.add_scalar('tr_avg_recall_per_epoch', train_avg['recall_avg'], global_step=epoch)
-
-            writer.add_scalar('val_avg_loss_per_epoch', val_avg['loss_avg'], global_step=epoch)
-            writer.add_scalar('val_avg_f1_per_epoch', val_avg['f1_avg'], global_step=epoch)
-            writer.add_scalar('val_avg_precision_per_epoch', val_avg['precision_avg'], global_step=epoch)
-            writer.add_scalar('val_avg_acc_per_epoch', val_avg['accuracy_avg'], global_step=epoch)
-            writer.add_scalar('val_avg_recall_per_epoch', val_avg['recall_avg'], global_step=epoch)
-
-            writer.add_scalar('test_avg_loss_per_epoch', test_avg['loss_avg'], global_step=epoch)
-            writer.add_scalar('test_avg_f1_per_epoch', test_avg['f1_avg'], global_step=epoch)
-            writer.add_scalar('test_avg_precision_per_epoch', test_avg['precision_avg'], global_step=epoch)
-            writer.add_scalar('test_avg_acc_per_epoch', test_avg['accuracy_avg'], global_step=epoch)
-            writer.add_scalar('test_avg_recall_per_epoch', test_avg['recall_avg'], global_step=epoch)
 
             writer.add_scalar('lr_per_epoch', scheduler.get_lr(), global_step=epoch)
+            writer.add_scalars('tr-val-test_avg_loss_per_epoch', {'train': train_avg['loss_avg'],
+                                                                  'val': val_avg['loss_avg'],
+                                                                  'test': test_avg['loss_avg']},
+                               global_step=epoch)
+            writer.add_scalars('tr-val-test_avg_f1_per_epoch', {'train': train_avg['f1_avg'],
+                                                                'val': val_avg['f1_avg'],
+                                                                'test': test_avg['f1_avg']}, global_step=epoch)
+
+            writer.add_scalars('tr-val-test_avg_precision_per_epoch', {'train': train_avg['precision_avg'],
+                                                                       'val': val_avg['precision_avg'],
+                                                                       'test': test_avg['precision_avg']},
+                               global_step=epoch)
+            writer.add_scalars('tr-val-test_avg_acc_per_epoch', {'train': train_avg['accuracy_avg'],
+                                                                 'val': val_avg['accuracy_avg'],
+                                                                 'test': test_avg['accuracy_avg']},
+                               global_step=epoch)
+            writer.add_scalars('tr-val-test_avg_recall_per_epoch', {'train': train_avg['recall_avg'],
+                                                                    'val': val_avg['recall_avg'],
+                                                                    'test': test_avg['recall_avg']},
+                               global_step=epoch)
+
+
         except Exception as e:
             print(e)
 
@@ -232,32 +239,23 @@ def main():
                        val_avg['accuracy_avg'],
                        val_avg['recall_avg'])
 
-        # output_name = output_name_file_name % \
-        #               (epoch, test_avg['loss_avg'],
-        #                test_avg['f1_avg'],
-        #                test_avg['precision_avg'],
-        #                test_avg['accuracy_avg'],
-        #                test_avg['recall_avg'])
+        # try:
+        #     # send_msn(epoch, f1=val_avg['f1_avg'])
+        #     email_output_train = 'The train epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
+        #                    (epoch, train_avg['loss_avg'], train_avg['f1_avg'], train_avg['precision_avg'],
+        #                     train_avg['accuracy_avg'], train_avg['recall_avg'])
+        #     email_output_val = 'The val epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
+        #                          (epoch, val_avg['loss_avg'], val_avg['f1_avg'], val_avg['precision_avg'],
+        #                           val_avg['accuracy_avg'], val_avg['recall_avg'])
+        #     email_output_test = 'The test epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
+        #                          (epoch, test_avg['loss_avg'], test_avg['f1_avg'], test_avg['precision_avg'],
+        #                           test_avg['accuracy_avg'], test_avg['recall_avg'])
         #
-        #
-
-        try:
-            # send_msn(epoch, f1=val_avg['f1_avg'])
-            email_output_train = 'The train epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
-                           (epoch, train_avg['loss_avg'], train_avg['f1_avg'], train_avg['precision_avg'],
-                            train_avg['accuracy_avg'], train_avg['recall_avg'])
-            email_output_val = 'The val epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
-                                 (epoch, val_avg['loss_avg'], val_avg['f1_avg'], val_avg['precision_avg'],
-                                  val_avg['accuracy_avg'], val_avg['recall_avg'])
-            email_output_test = 'The test epoch:%d,f1:%f,loss:%f,precision:%f,accuracy:%f,recall:%f' % \
-                                 (epoch, test_avg['loss_avg'], test_avg['f1_avg'], test_avg['precision_avg'],
-                                  test_avg['accuracy_avg'], test_avg['recall_avg'])
-
-            email_output = email_output_train + '\n' + email_output_val + '\n' + email_output_test + '\n\n\n'
-            email_list.append(email_output)
-            send_email(str(email_header), context=str(email_list))
-        except:
-            pass
+        #     email_output = email_output_train + '\n' + email_output_val + '\n' + email_output_test + '\n\n\n'
+        #     email_list.append(email_output)
+        #     send_email(str(email_header), context=str(email_list))
+        # except:
+        #     pass
 
         if epoch % 1 == 0:
             save_model_name = os.path.join(args.model_save_dir, output_name)
@@ -299,18 +297,6 @@ def train(model, optimizer, dataParser, epoch):
         # 准备输入数据
         images = input_data['tamper_image'].cuda()
         labels = input_data['gt_band'].cuda()
-
-        # 对读取的numpy类型数据进行调整
-        # labels = []
-        # if torch.cuda.is_available():
-        #     images = torch.from_numpy(images).cuda()
-        #     for item in labels_numpy:
-        #         labels.append(torch.from_numpy(item).cuda())
-        # else:
-        #     images = torch.from_numpy(images)
-        #     for item in labels_numpy:
-        #         labels.append(torch.from_numpy(item))
-
         if torch.cuda.is_available():
             loss = torch.zeros(1).cuda()
             loss_8t = torch.zeros(()).cuda()
@@ -324,32 +310,11 @@ def train(model, optimizer, dataParser, epoch):
             # 网络输出
             outputs = model(images)
             # 这里放保存中间结果的代码
-            if args.save_mid_result:
-                if batch_index in args.mid_result_index:
-                    save_mid_result(outputs, labels, epoch, batch_index, args.mid_result_root, save_8map=True,
-                                    train_phase=True)
-                else:
-                    pass
-            else:
-                pass
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
 
-            # if not args.band_mode:
-            #     # 如果不是使用band_mode 则需要计算8张图的loss
-            #     loss = wce_dice_huber_loss(outputs[0], labels[0]) * args.fuse_loss_weight
-            #
-            #     writer.add_scalar('fuse_loss_per_epoch', loss.item() / args.fuse_loss_weight,
-            #                       global_step=epoch * train_epoch + batch_index)
-            #
-            #     for c_index, c in enumerate(outputs[1:]):
-            #         one_loss_t = wce_dice_huber_loss(c, labels[c_index + 1])
-            #         loss_8t += one_loss_t
-            #         writer.add_scalar('%d_map_loss' % (c_index), one_loss_t.item(), global_step=train_epoch)
-            #     loss += loss_8t
-            #     loss = loss / 20
-            loss = wce_dice_huber_loss(outputs[0], labels)
+            loss = wce_dice_huber_loss(outputs, labels)
             writer.add_scalar('fuse_loss_per_epoch', loss.item(),
                               global_step=epoch * train_epoch + batch_index)
 
@@ -363,10 +328,10 @@ def train(model, optimizer, dataParser, epoch):
         end = time.time()
 
         # 评价指标
-        f1score = my_f1_score(outputs[0], labels)
-        precisionscore = my_precision_score(outputs[0], labels)
-        accscore = my_acc_score(outputs[0], labels)
-        recallscore = my_recall_score(outputs[0], labels)
+        f1score = my_f1_score(outputs, labels)
+        precisionscore = my_precision_score(outputs, labels)
+        accscore = my_acc_score(outputs, labels)
+        recallscore = my_recall_score(outputs, labels)
 
         writer.add_scalar('f1_score', f1score, global_step=epoch * train_epoch + batch_index)
         writer.add_scalar('precision_score', precisionscore, global_step=epoch * train_epoch + batch_index)
@@ -431,15 +396,7 @@ def val(model, dataParser, epoch):
             labels = labels.cuda()
 
         # 对读取的numpy类型数据进行调整
-        # labels = []
-        # if torch.cuda.is_available():
-        #     images = torch.from_numpy(images).cuda()
-        #     for item in labels_numpy:
-        #         labels.append(torch.from_numpy(item).cuda())
-        # else:
-        #     images = torch.from_numpy(images)
-        #     for item in labels_numpy:
-        #         labels.append(torch.from_numpy(item))
+
 
         if torch.cuda.is_available():
             loss = torch.zeros(1).cuda()
@@ -463,21 +420,7 @@ def val(model, dataParser, epoch):
         "         Loss 函数           "
         """"""""""""""""""""""""""""""
 
-        # if not args.band_mode:
-        #     # 如果不是使用band_mode 则需要计算8张图的loss
-        #     loss = wce_dice_huber_loss(outputs[0], labels) * args.fuse_loss_weight
-        #
-        #     writer.add_scalar('val_fuse_loss_per_epoch', loss.item() / args.fuse_loss_weight,
-        #                       global_step=epoch * train_epoch + batch_index)
-        #
-        #     for c_index, c in enumerate(outputs[1:]):
-        #         one_loss_t = wce_dice_huber_loss(c, labels[c_index + 1])
-        #         loss_8t += one_loss_t
-        #         writer.add_scalar('val_%d_map_loss' % (c_index), one_loss_t.item(), global_step=train_epoch)
-        #     loss += loss_8t
-        #     loss = loss / 20
-
-        loss = wce_dice_huber_loss(outputs[0], labels)
+        loss = wce_dice_huber_loss(outputs, labels)
         writer.add_scalar('val_fuse_loss_per_epoch', loss.item(),
                           global_step=epoch * val_epoch + batch_index)
 
@@ -488,10 +431,10 @@ def val(model, dataParser, epoch):
         end = time.time()
 
         # 评价指标
-        f1score = my_f1_score(outputs[0], labels)
-        precisionscore = my_precision_score(outputs[0], labels)
-        accscore = my_acc_score(outputs[0], labels)
-        recallscore = my_recall_score(outputs[0], labels)
+        f1score = my_f1_score(outputs, labels)
+        precisionscore = my_precision_score(outputs, labels)
+        accscore = my_acc_score(outputs, labels)
+        recallscore = my_recall_score(outputs, labels)
 
         writer.add_scalar('val_f1_score', f1score, global_step=epoch * val_epoch + batch_index)
         writer.add_scalar('val_precision_score', precisionscore, global_step=epoch * val_epoch + batch_index)
@@ -569,7 +512,7 @@ def test(model, dataParser, epoch):
         "         Loss 函数           "
         """"""""""""""""""""""""""""""
 
-        loss = wce_dice_huber_loss(outputs[0], labels)
+        loss = wce_dice_huber_loss(outputs, labels)
         writer.add_scalar('val_fuse_loss_per_epoch', loss.item(),
                           global_step=epoch * test_epoch + batch_index)
 
@@ -580,16 +523,16 @@ def test(model, dataParser, epoch):
         end = time.time()
 
         # 评价指标
-        f1score = my_f1_score(outputs[0], labels)
-        precisionscore = my_precision_score(outputs[0], labels)
-        accscore = my_acc_score(outputs[0], labels)
-        recallscore = my_recall_score(outputs[0], labels)
+        f1score = my_f1_score(outputs, labels)
+        precisionscore = my_precision_score(outputs, labels)
+        accscore = my_acc_score(outputs, labels)
+        recallscore = my_recall_score(outputs, labels)
 
         writer.add_scalar('test_f1_score', f1score, global_step=epoch * test_epoch + batch_index)
         writer.add_scalar('test_precision_score', precisionscore, global_step=epoch * test_epoch + batch_index)
         writer.add_scalar('test_acc_score', accscore, global_step=epoch * test_epoch + batch_index)
         writer.add_scalar('test_recall_score', recallscore, global_step=epoch * test_epoch + batch_index)
-        writer.add_images('test_image_batch:%d' % (batch_index), outputs[0], global_step=epoch)
+        writer.add_images('test_image_batch:%d' % (batch_index), outputs, global_step=epoch)
         ################################
 
         f1_value.update(f1score)

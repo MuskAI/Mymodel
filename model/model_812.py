@@ -110,7 +110,7 @@ class Aspp(nn.Module):
 
 
 class Net(nn.Module):
-    def __init__(self, input_shape=(320,320,3)):
+    def __init__(self, input_shape=(320, 320, 3)):
         super(Net, self).__init__()
         self.input_shape = input_shape
 

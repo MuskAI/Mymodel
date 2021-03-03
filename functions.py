@@ -4,30 +4,16 @@ from torch import nn
 from sklearn.metrics import precision_score,accuracy_score,f1_score,recall_score
 import torch.nn.functional as F
 
-#
-# class Evaluation:
-#     def __init__(self,output,label):
-#         self.output = output
-#         self.label = label
-#
-#     def start_evaluation(self,compute_f1 = True,compute_precision= True,compute_accuracy = True,compute_recall = True):
-#
-#         if compute_f1:
-#             pass
-#         if compute_precision:
-#             pass
-#         if compute_recall:
-#             pass
-#         if compute_accuracy:
-#             pass
-#
-#         return
 
 
 def wce_dice_huber_loss(pred, gt):
+    # print(gt.shape)
+    # print(pred.shape)
     loss1 = cross_entropy_loss(pred, gt)
+    # loss1 = nn.BCEWithLogitsLoss()(pred, gt)
     loss2 = DiceLoss()(pred, gt)
-    return 0.7 * loss1 + 0.3 * loss2
+
+    return 0.5 * loss1 + 0.5 * loss2
 
 
 
@@ -138,6 +124,29 @@ def sigmoid_cross_entropy_loss(prediction, label):
     return torch.sum(cost)
 
 
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=2, weight=None, reduction='mean'):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.weight = weight
+        self.reduction = reduction
+
+    def forward(self, output, target):
+        # convert output to pseudo probability
+        out_target = torch.stack([output[i, t] for i, t in enumerate(target)])
+        probs = torch.sigmoid(out_target)
+        focal_weight = torch.pow(1 - probs, self.gamma)
+
+        # add focal weight to cross entropy
+        ce_loss = F.cross_entropy(output, target, weight=self.weight, reduction='none')
+        focal_loss = focal_weight * ce_loss
+
+        if self.reduction == 'mean':
+            focal_loss = (focal_loss / focal_weight.sum()).sum()
+        elif self.reduction == 'sum':
+            focal_loss = focal_loss.sum()
+
+        return focal_loss
 def cross_entropy_loss(prediction, label):
     label = label.long()
     mask = (label != 0).float()
@@ -151,8 +160,6 @@ def cross_entropy_loss(prediction, label):
     _ = np.array(mask.cpu())
     cost = torch.nn.functional.binary_cross_entropy(
             prediction.float(),label.float(), weight=mask)
-    # cost = torch.nn.BCELoss()(prediction, label.float())
-
     # return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
     return torch.sum(cost)
 def weighted_nll_loss(prediction, label):

@@ -8,7 +8,7 @@ from email.header import Header
 import time
 
 class SendMail:
-    def __init__(self,header, context):
+    def __init__(self,header='训练报告', context=''):
         # 用于构建邮件头
 
         # 发信方的信息：发信邮箱，QQ 邮箱授权码
@@ -47,4 +47,4 @@ if __name__ == '__main__':
     topic = 'Topic:'
     pages = ''
     context = '%s\n%s\n%s\n' %(now_time,topic,pages)
-    SendMail(context)
+    SendMail(context=context)

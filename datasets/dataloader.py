@@ -8,6 +8,7 @@ output: a iterator
 """
 import torch
 from torch.utils.data import Dataset, DataLoader
+
 from torchvision import transforms, utils
 import torchvision
 from PIL import Image
@@ -18,7 +19,7 @@ from sklearn.model_selection import train_test_split
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-from check_image_pair import check_4dim_img_pair
+# from check_image_pair import check_4dim_img_pair
 from PIL import ImageFilter
 import random
 from rich.progress import track
@@ -75,28 +76,24 @@ class TamperDataset(Dataset):
         # test mode
         mode = self.train_val_test_mode
 
-        # default mode
-        # tamper_path = self.train_src_list[index]
-        # gt_path = self.train_gt_list[index]
         if mode == 'train':
             tamper_path = self.train_src_list[index]
             gt_path = self.train_gt_list[index]
-
         elif mode == 'val':
-
             tamper_path = self.val_src_list[index]
             gt_path = self.val_gt_list[index]
-
         elif mode == 'test':
-
             tamper_path = self.test_src_list[index]
             gt_path = self.test_gt_list[index]
         else:
             traceback.print_exc('an error occur')
 
         # read img
-        img = Image.open(tamper_path)
-        gt = Image.open(gt_path)
+        try:
+            img = Image.open(tamper_path)
+            gt = Image.open(gt_path)
+        except Exception as e:
+            traceback.print_exc(e)
         # check the src dim
         if len(img.split()) != 3 or img.size !=(320,320) or gt.size !=(320,320):
             rich.print(tamper_path, 'error')
@@ -114,9 +111,10 @@ class TamperDataset(Dataset):
         try:
             # 全部将下面的1 换成255
             gt_band = self.__gen_band(gt)
-            gt_dou_edge = self.__to_dou_edge(gt)
-            # 下面的relation_map还是01
-            relation_map = self.__gen_8_2_map(np.array(gt,dtype='uint8'))
+            if self.stage_type == 'stage2':
+                gt_dou_edge = self.__to_dou_edge(gt)
+                # 下面的relation_map还是01
+                relation_map = self.__gen_8_2_map(np.array(gt,dtype='uint8'))
 
         except Exception as e:
             print(e)
@@ -128,14 +126,15 @@ class TamperDataset(Dataset):
             else:
 
                 img = transforms.Compose([
-                    AddGlobalBlur(p=0.5),
+                    # AddGlobalBlur(p=0.5),
                     transforms.ToTensor(),
                     transforms.Normalize((0.47, 0.43, 0.39), (0.27, 0.26, 0.27)),
                 ])(img)
 
             # transform
             gt_band = transforms.ToTensor()(gt_band)
-            gt_dou_edge = transforms.ToTensor()(gt_dou_edge)
+            if self.stage_type == 'stage2':
+                gt_dou_edge = transforms.ToTensor()(gt_dou_edge)
 
         elif mode == 'test':
             # if transform src
@@ -149,14 +148,16 @@ class TamperDataset(Dataset):
 
             # transform
             gt_band = transforms.ToTensor()(gt_band)
-            gt_dou_edge = transforms.ToTensor()(gt_dou_edge)
+
+            if self.stage_type == 'stage2':
+                gt_dou_edge = transforms.ToTensor()(gt_dou_edge)
 
         else:
             traceback.print_exc('the train_val_test mode is error')
         if self.stage_type == 'stage1':
             sample = {'tamper_image': img, 'gt_band': gt_band, 'path': {'src': tamper_path, 'gt': gt_path}}
         elif self.stage_type == 'stage2':
-            sample = {'tamper_image': img, 'gt_band': gt_band, 'gt_dou_edge': gt_band,'relation_map':relation_map,
+            sample = {'tamper_image': img, 'gt_band': gt_band, 'gt_dou_edge': gt_dou_edge,'relation_map':relation_map,
                       'path': {'src': tamper_path, 'gt': gt_path}}
         return sample
 
@@ -560,9 +561,9 @@ class MixData:
             try:
                 if using_data['my_sp']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/coco_splicing_no_poisson_after_divide/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_splicing_no_poisson_after_divide/train_src'
                         src_path_list.append(path)
-                        self.sp_gt_path = '/media/liu/File/12月新数据/After_divide/coco_splicing_no_poisson_after_divide/train_gt'
+                        self.sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_splicing_no_poisson_after_divide/train_gt'
                     else:
                         path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
                         src_path_list.append(path)
@@ -573,9 +574,9 @@ class MixData:
             try:
                 if using_data['my_cm']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/coco_cm_after_divide/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_src'
                         src_path_list.append(path)
-                        self.cm_gt_path = '/media/liu/File/12月新数据/After_divide/coco_cm_after_divide/train_gt'
+                        self.cm_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_gt'
                     else:
                         path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
                         src_path_list.append(path)
@@ -588,9 +589,9 @@ class MixData:
             try:
                 if using_data['template_casia_casia']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/casia_au_and_casia_template_after_divide/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/casia_au_and_casia_template_after_divide/train_src'
                         src_path_list.append(path)
-                        self.template_casia_casia_gt_path = '/media/liu/File/12月新数据/After_divide/casia_au_and_casia_template_after_divide/train_gt'
+                        self.template_casia_casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/casia_au_and_casia_template_after_divide/train_gt'
 
                     else:
                         path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
@@ -602,9 +603,9 @@ class MixData:
             try:
                 if using_data['template_coco_casia']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/coco_casia_template_after_divide/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_casia_template_after_divide/train_src'
                         src_path_list.append(path)
-                        self.template_coco_casia_gt_path = '/media/liu/File/12月新数据/After_divide/coco_casia_template_after_divide/train_gt'
+                        self.template_coco_casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_casia_template_after_divide/train_gt'
                     else:
                         path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
                         src_path_list.append(path)
@@ -618,24 +619,23 @@ class MixData:
             try:
                 if using_data['cod10k']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/COD10K_after_divide/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/COD10K_after_divide/train_src'
                         src_path_list.append(path)
-                        self.COD10K_gt_path = '/media/liu/File/12月新数据/After_divide/COD10K_after_divide/train_gt'
-                        self.cm_gt_band_path = ''
+                        self.COD10K_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/COD10K_after_divide/train_gt'
+
                     else:
                         path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
                         src_path_list.append(path)
                         self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
-                        self.cm_gt_band_path = ''
             except Exception as e:
                 print(e)
             #############################################
 
             # negative
             try:
-                if using_data['negative_coco']:
+                if using_data['negative']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/texture_negative'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/texture_negative'
                         src_path_list.append(path)
                         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
                     else:
@@ -648,7 +648,7 @@ class MixData:
             try:
                 if using_data['negative_casia_texture']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/texture_negative'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/texture_negative'
                         src_path_list.append(path)
                         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
                     else:
@@ -674,22 +674,22 @@ class MixData:
             try:
                 if using_data['texture_sp']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/train_src'
                         src_path_list.append(path)
-                        self.texture_sp_gt_path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/train_gt'
+                        self.texture_sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/train_gt'
                     else:
-                        path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/test_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_src'
                         src_path_list.append(path)
-                        self.texture_sp_gt_path = '/media/liu/File/12月新数据/After_divide/0108_texture_and_casia_template_divide/test_gt'
+                        self.texture_sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_gt'
             except Exception as e:
                 print(e)
 
             try:
                 if using_data['texture_cm']:
                     if train_mode:
-                        path = '/media/liu/File/12月新数据/After_divide/no_periodic_texture_dataset0109/train_src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/no_periodic_texture_dataset0109/train_src'
                         src_path_list.append(path)
-                        self.texture_cm_gt_path = '/media/liu/File/12月新数据/After_divide/no_periodic_texture_dataset0109/train_gt'
+                        self.texture_cm_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/no_periodic_texture_dataset0109/train_gt'
                     else:
                         path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
                         src_path_list.append(path)
@@ -700,7 +700,7 @@ class MixData:
             try:
                 if using_data['texture_unperiodic_rotation']:
                     if train_mode:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/negative/src'
                         src_path_list.append(path)
                         self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
                     else:
@@ -716,9 +716,9 @@ class MixData:
                     if train_mode:
                         pass
                     else:
-                        path = '/media/liu/File/12月新数据/After_divide/casia/src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/src'
                         src_path_list.append(path)
-                        self.casia_gt_path = '/media/liu/File/12月新数据/After_divide/casia/gt'
+                        self.casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/gt'
 
             except Exception as e:
                 print(e)
@@ -730,9 +730,9 @@ class MixData:
                     if train_mode:
                         pass
                     else:
-                        path = '/media/liu/File/12月新数据/After_divide/coverage/src'
+                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/src'
                         src_path_list.append(path)
-                        self.coverage_gt_path = '/media/liu/File/12月新数据/After_divide/coverage/gt'
+                        self.coverage_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/gt'
 
             except Exception as e:
                 print(e)
@@ -832,14 +832,14 @@ if __name__ == '__main__':
                                               'template_coco_casia': False,
                                               'cod10k': False,
                                               'casia': False,
-                                              'coverage': False,
+                                              'coverage': True,
                                               'columb': False,
                                               'negative_coco': False,
                                               'negative_casia': False,
                                               'texture_sp': False,
-                                              'texture_cm': True,
-                                              }, train_val_test_mode='train',stage_type='stage2')
-    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=5, num_workers=8)
+                                              'texture_cm': False,
+                                              }, train_val_test_mode='test',stage_type='stage1')
+    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=1, num_workers=4)
     start = time.time()
     try:
         for idx, item in enumerate(track(dataloader)):
@@ -853,7 +853,7 @@ if __name__ == '__main__':
             # if idx == 3000:
             #     break
     except Exception as e:
-        print(item['path'])
+        # print(item['path'])
         print(e)
     end = time.time()
     print('time :', end - start)

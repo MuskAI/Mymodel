@@ -10,6 +10,13 @@
             </list>
           </settings>
         </remote-mappings>
+        <remote-mappings server-id="python@sftp://liu@123.207.223.60:1154/home/liu/anaconda3/envs/haoran/bin/python3.6">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/home/liu/chenhaoran/Mymodel" />
+            </list>
+          </settings>
+        </remote-mappings>
       </list>
     </list>
   </component>
