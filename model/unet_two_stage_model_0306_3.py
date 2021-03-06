@@ -1,8 +1,9 @@
 """
 @author :chenhaoran
 time: 03/06
-第二个版本：
-这个版本相对于第一个版本将bilinear改为了False
+第三个版本：
+1.这个版本相对于第一个版本将bilinear改为了False
+2. 相对于第二个版本多了空洞卷积和
 """
 import torch.nn.functional as F
 from torchsummary import summary
@@ -10,25 +11,62 @@ import sys
 
 sys.path.append('')
 import torch.nn as nn
-from .unet_parts import *
+import numpy as np
+from unet_parts import *
 
+class SRMConv(nn.Module):
+    def __init__(self, channels=3, kernel='filter1'):
+        super(SRMConv, self).__init__()
+        self.channels = channels
+        q = [4.0, 12.0, 2.0]
+        filter1 = [[0, 0, 0, 0, 0],
+                   [0, -1, 2, -1, 0],
+                   [0, 2, -4, 2, 0],
+                   [0, -1, 2, -1, 0],
+                   [0, 0, 0, 0, 0]]
+        filter2 = [[-1, 2, -2, 2, -1],
+                   [2, -6, 8, -6, 2],
+                   [-2, 8, -12, 8, -2],
+                   [2, -6, 8, -6, 2],
+                   [-1, 2, -2, 2, -1]]
+        filter3 = [[0, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0],
+                   [0, 1, -2, 1, 0],
+                   [0, 0, 0, 0, 0],
+                   [0, 0, 0, 0, 0]]
+        filter1 = np.asarray(filter1, dtype=float) / q[0]
+        filter2 = np.asarray(filter2, dtype=float) / q[1]
+        filter3 = np.asarray(filter3, dtype=float) / q[2]
+        if kernel == 'filter1':
+            kernel = filter1
+        elif kernel =='filter2':
+            kernel = filter2
+        elif kernel == 'filter3':
+            kernel = filter3
+        else:
+            print('kernel error')
+            exit(0)
+        kernel = torch.FloatTensor(kernel).unsqueeze(0).unsqueeze(0)
+        kernel = np.repeat(kernel, self.channels, axis=0)
+        self.weight = nn.Parameter(data=kernel, requires_grad=False).cuda()
+
+    def __call__(self, x):
+        x = F.conv2d(x, self.weight, padding=2, groups=self.channels)
+        return x
 
 
 class UNetStage1(nn.Module):
     def __init__(self, n_channels=3, bilinear=False):
         super(UNetStage1, self).__init__()
-        factor = 2 if bilinear else 1
-        _factor = 1 if bilinear else 2
-        print('factor is : ',_factor)
         self.n_channels = n_channels
         self.n_classes = 1
         self.bilinear = bilinear
 
-        self.inc = DoubleConv(n_channels, 64)
+        self.inc = DilateDoubleConv(n_channels, 64)
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.down3 = Down(256, 512)
-
+        factor = 2 if bilinear else 1
         self.down4 = Down(512, 1024 // factor)
         self.up1 = Up(1024, 512 // factor, bilinear)
         self.up2 = Up(512, 256 // factor, bilinear)
@@ -49,21 +87,17 @@ class UNetStage1(nn.Module):
         stage_x4 = self.up4(stage_x3, x1)
         logits = self.outc(stage_x4)
         return [logits, stage_x1, stage_x2, stage_x3]
-        # return logits
 
 class UNetStage2(nn.Module):
     def __init__(self, n_channels=6, bilinear=False):
         super(UNetStage2, self).__init__()
         factor = 2 if bilinear else 1
         _factor = 1 if bilinear else 2
-
-
-        print('factor is : ',_factor)
         self.n_channels = n_channels
         self.n_classes = 1
         self.bilinear = bilinear
 
-        self.inc = DoubleConv(n_channels, 64)
+        self.inc = DilateDoubleConv(n_channels, 64)
         self.maxpool = MaxPool()
         self.down1 = Down_no_pool(64, 128)
         self.down2 = Down_no_pool(128, 256)
@@ -97,9 +131,9 @@ class UNetStage2(nn.Module):
         self.final = RelationFuse(in_channels=16 + 8, out_channels=1)
 
     def forward(self, x, stage3, stage2, stage1):
-
+        noise_3dim1 = SRMConv(kernel='kernel1')(x[1])
+        src_noise = torch.cat((x[],noise_3dim1),1)
         x1 = self.inc(x)
-
 
         # fuse stage
         x2 = self.maxpool(x1)

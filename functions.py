@@ -11,9 +11,8 @@ def wce_dice_huber_loss(pred, gt):
     # print(pred.shape)
     loss1 = cross_entropy_loss(pred, gt)
     # loss1 = nn.BCEWithLogitsLoss()(pred, gt)
-    torch.nn.BCEWithLogitsLoss
     loss2 = DiceLoss()(pred, gt)
-    return 0.5 * loss1 + 0.5 * loss2
+    return 0.6 * loss1 + 0.4 * loss2
 
 
 
@@ -150,18 +149,14 @@ class FocalLoss(nn.Module):
 def cross_entropy_loss(prediction, label):
     label = label.long()
     mask = (label != 0).float()
-    _ = np.array(mask.cpu())
-
     num_positive = torch.sum(mask).float()
     num_negative = mask.numel() - num_positive
     # print (num_positive, num_negative)
     mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
-    _ = np.array(mask.cpu())
     cost = torch.nn.functional.binary_cross_entropy(
             prediction.float(),label.float(), weight=mask)
-    # return torch.sum(cost)/(cost.size()[0]*cost.size()[1]*cost.size()[2]*cost.size()[3])
-    return torch.sum(cost)
+    return cost
 def weighted_nll_loss(prediction, label):
     label = torch.squeeze(label.long(), dim=0)
     nch = prediction.shape[1]
@@ -192,15 +187,6 @@ def weighted_cross_entropy_loss(prediction, label, output_mask=False):
     else:
         return torch.sum(cost)
 
-def l2_regression_loss(prediction, label, mask):
-    label = torch.squeeze(label.float())
-    prediction = torch.squeeze(prediction.float())
-    mask = (mask != 0).float()
-    num_positive = torch.sum(mask).float()
-    cost = torch.nn.functional.mse_loss(prediction, label, reduce=False)
-    cost = torch.mul(cost, mask)
-    cost = cost / (num_positive + 0.00000001)
-    return torch.sum(cost)
 
 def l1_loss(prediction,label):
     return torch.nn.L1Loss()(prediction,label)
@@ -214,14 +200,6 @@ def CE_loss(prediction,label):
     return torch.sum(cost)
 
 
-def debug_ce(prediction,label):
-    cost = torch.nn.functional.binary_cross_entropy(prediction,label)
-    return cost
-
-def BCE_loss(prediction,label):
-    loss1 = cross_entropy_loss(prediction,label)
-
-
 
 def wce_huber_loss(prediction,label):
     loss1 = cross_entropy_loss(prediction,label)
@@ -232,8 +210,7 @@ def wce_huber_loss(prediction,label):
 
 def wce_huber_loss_8(prediction,label):
     loss1 = cross_entropy_loss(prediction,label)
-    loss2 = smooth_l1_loss(prediction,label)
-    return 0.6*loss1+0.4*loss2
+    return loss1
 def my_precision_score(prediction,label):
     y = prediction.reshape(-1)
     l = label.reshape(-1)
@@ -272,9 +249,11 @@ def my_recall_score(prediction,label):
     return recall_score(y, l, zero_division=1)
 
 if __name__ == '__main__':
-    a = torch.randn(1,1,320,320)
-    b = torch.randn(1, 1, 320, 320)
+    a = torch.randn(1, 1, 320,320)
+    b = np.random.randn(1,1,320,320)
+    b = np.where(b>0.9,1,0).astype('float')
+    b = torch.from_numpy(b)
+    # b = torch.randn(1, 1, 320, 320)
     a = nn.Sigmoid()(a)
-    b = nn.Sigmoid()(b)
-    loss = wce_dice_huber_loss(a,b)
+    loss = cross_entropy_loss(a,b)
     print(loss)

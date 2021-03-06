@@ -10,8 +10,8 @@ from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cr
     wce_huber_loss_8, my_recall_score, cross_entropy_loss, wce_dice_huber_loss
 from torch.nn import init
 from datasets.dataloader import TamperDataset
-from model.unet_two_stage_model_0306 import UNetStage1 as Net1
-from model.unet_two_stage_model_0306 import UNetStage2 as Net2
+from model.unet_two_stage_model_0306_2 import UNetStage1 as Net1
+from model.unet_two_stage_model_0306_2 import UNetStage2 as Net2
 from PIL import Image
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -65,7 +65,7 @@ parser.add_argument('--gpu', default='0', type=str,
 # parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
-                    default='../save_model/0306_stage1&2_后缀为0306的模型')
+                    default='/data-output/0306_stage1&2_后缀为0306_2的模型')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -97,9 +97,9 @@ if not isdir(model_save_dir):
 # writer = SummaryWriter(
 #     'runs/' + '0105_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 writer = SummaryWriter(
-    '../runs/' + '0306_stage1&2_后缀为0306的模型')
+    '../runs/' + '0306_stage1&2_后缀为0306_2的模型')
 email_header = 'Python'
-output_name_file_name = '0306_stage1&2_后缀为0306的模型_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
+output_name_file_name = '0306_stage1&2_后缀为0306_2的模型_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
 """"""""""""""""""""""""""""""
 "    ↑↑↑↑需要修改的参数↑↑↑↑     "
 """"""""""""""""""""""""""""""
@@ -138,14 +138,14 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train')
-    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val')
-    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test')
+    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train',device='jly')
+    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val',device='jly')
+    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test',device='jly')
 
     # 3 specific dataloader
-    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=4, shuffle=True,
+    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=6, shuffle=True,
                                                   pin_memory=False)
-    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size, num_workers=4)
+    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size, num_workers=6)
 
     testDataLoader = torch.utils.data.DataLoader(testData, batch_size=args.batch_size, num_workers=0)
     # model
@@ -339,7 +339,7 @@ def train(model1, model2, optimizer1,optimizer2, dataParser, epoch):
 
             rgb_pred = images * one_stage_outputs[0]
             rgb_pred_rgb = torch.cat((rgb_pred, images), 1)
-            two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
+            two_stage_outputs = model2([rgb_pred_rgb, images], one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""

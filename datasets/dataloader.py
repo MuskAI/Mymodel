@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-# from check_image_pair import check_4dim_img_pair
+from check_image_pair import check_4dim_img_pair
 from PIL import ImageFilter
 import random
 from rich.progress import track
@@ -350,8 +350,12 @@ class MixData:
         :param using_data:
         :param device:
         """
+        if device=='413':
+            self.data_root = '/home/liu/chenhaoran/Tamper_Data/3月最新数据'
+        elif device=='jly':
+            self.data_root = '/data-input/3月最新数据'
         # data_path_gather的逻辑是返回一个字典，该字典包含了需要使用的src 和 gt
-        data_dict = MixData.__data_path_gather(self, train_mode=train_mode, using_data=using_data, device=device)
+        data_dict = MixData.__data_path_gather(self, train_mode=train_mode, using_data=using_data)
         # src
 
         # if True:
@@ -429,7 +433,7 @@ class MixData:
         template_casia_casia = ['casia_au_and_casia_template_after_divide']
         COD10K_type = ['COD10K']
         texture_sp_type = ['texture_and_casia_template_divide']
-        texture_cm_type = ['no_periodic_texture_dataset']
+        texture_cm_type = ['periodic_texture']
         type = []
         name = path.split('/')[-1]
         # name = path.split('\\')[-1]
@@ -539,7 +543,7 @@ class MixData:
 
         return gt_path
 
-    def __data_path_gather(self, train_mode=True, device='413', using_data=None):
+    def __data_path_gather(self, train_mode=True, using_data=None):
         """
         using_data = {'my_sp':True,'my_cm':True,'casia':True,'copy_move':True,'columb':True,'negative':True}
         :param device:
@@ -556,199 +560,159 @@ class MixData:
                 "using_data = {'my_sp':True,'my_cm':True,'casia':True,'copy_move':True,'columb':True,'negative':True}")
             sys.exit(1)
 
-        if device == '413':
-            # sp cm
-            try:
-                if using_data['my_sp']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_splicing_no_poisson_after_divide/train_src'
-                        src_path_list.append(path)
-                        self.sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_splicing_no_poisson_after_divide/train_gt'
-                    else:
-                        path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
-                        src_path_list.append(path)
-                        self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
-            except Exception as e:
-                print(e)
 
-            try:
-                if using_data['my_cm']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_src'
-                        src_path_list.append(path)
-                        self.cm_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_gt'
-                    else:
-                        path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
-                        src_path_list.append(path)
-                        self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
-                        self.cm_gt_band_path = ''
-            except Exception as e:
-                print(e)
-            ###########################################
-            # template
-            try:
-                if using_data['template_casia_casia']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/casia_au_and_casia_template_after_divide/train_src'
-                        src_path_list.append(path)
-                        self.template_casia_casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/casia_au_and_casia_template_after_divide/train_gt'
-
-                    else:
-                        path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
-                        src_path_list.append(path)
-                        self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
-            except Exception as e:
-                print('template_casia_casia', 'error')
-
-            try:
-                if using_data['template_coco_casia']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_casia_template_after_divide/train_src'
-                        src_path_list.append(path)
-                        self.template_coco_casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_casia_template_after_divide/train_gt'
-                    else:
-                        path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
-                        src_path_list.append(path)
-                        self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
-
-            except Exception as e:
-                print(e)
-            ###########################################
-
-            # cod10k
-            try:
-                if using_data['cod10k']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/COD10K_after_divide/train_src'
-                        src_path_list.append(path)
-                        self.COD10K_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/COD10K_after_divide/train_gt'
-
-                    else:
-                        path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
-                        src_path_list.append(path)
-                        self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
-            except Exception as e:
-                print(e)
-            #############################################
-
-            # negative
-            try:
-                if using_data['negative']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/texture_negative'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-                    else:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-            except Exception as e:
-                print(e)
-
-            try:
-                if using_data['negative_casia_texture']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/texture_negative'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-                    else:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-            except Exception as e:
-                print(e)
-            try:
-                if using_data['negative_cod10k']:
-                    if train_mode:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-                    else:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-            except Exception as e:
-                print(e)
-
-            # texture
-            try:
-                if using_data['texture_sp']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/train_src'
-                        src_path_list.append(path)
-                        self.texture_sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/train_gt'
-                    else:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_src'
-                        src_path_list.append(path)
-                        self.texture_sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_gt'
-            except Exception as e:
-                print(e)
-
-            try:
-                if using_data['texture_cm']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/no_periodic_texture_dataset0109/train_src'
-                        src_path_list.append(path)
-                        self.texture_cm_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/no_periodic_texture_dataset0109/train_gt'
-                    else:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
-                        src_path_list.append(path)
-                        self.texture_cm_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-            except Exception as e:
-                print(e)
-
-            try:
-                if using_data['texture_unperiodic_rotation']:
-                    if train_mode:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/negative/src'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-                    else:
-                        path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
-                        src_path_list.append(path)
-                        self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
-
-            except Exception as e:
-                print(e)
-
-            try:
-                if using_data['casia']:
-                    if train_mode:
-                        pass
-                    else:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/src'
-                        src_path_list.append(path)
-                        self.casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/gt'
-
-            except Exception as e:
-                print(e)
-            ##################################################################################
-
-            # public dataset
-            try:
-                if using_data['coverage']:
-                    if train_mode:
-                        pass
-                    else:
-                        path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/src'
-                        src_path_list.append(path)
-                        self.coverage_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/gt'
-
-            except Exception as e:
-                print(e)
-
-            try:
-                if using_data['columb']:
+        # sp cm
+        try:
+            if using_data['my_sp']:
+                if train_mode:
+                    path = os.path.join(self.data_root,'coco_sp/train_src')
+                    src_path_list.append(path)
+                    self.sp_gt_path =os.path.join(self.data_root, 'coco_sp/train_gt')
+                else:
                     path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
                     src_path_list.append(path)
-            except Exception as e:
-                print(e)
-            ##############################
+                    self.sp_gt_path = '/media/liu/File/Sp_320_dataset/ground_truth_result_320'
+        except Exception as e:
+            print(e)
 
+        try:
+            if using_data['my_cm']:
+                if train_mode:
+                    path = os.path.join(self.data_root, 'coco_cm/train_src')
+                    # path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_src'
+                    src_path_list.append(path)
+                    self.cm_gt_path = os.path.join(self.data_root, 'coco_cm/train_gt')
+                else:
+                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    src_path_list.append(path)
+                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+        except Exception as e:
+            print(e)
+        ###########################################
+        # template
+        try:
+            if using_data['template_casia_casia']:
+                if train_mode:
+                    path = os.path.join(self.data_root,'casia_au_and_casia_template_after_divide/train_src')
 
+                    src_path_list.append(path)
+                    self.template_casia_casia_gt_path = os.path.join(self.data_root, 'casia_au_and_casia_template_after_divide/train_gt')
 
-        elif device == 'flyai':
-            pass
+                else:
+
+                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    src_path_list.append(path)
+                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+        except Exception as e:
+            print('template_casia_casia', 'error')
+
+        try:
+            if using_data['template_coco_casia']:
+                if train_mode:
+                    path = os.path.join(self.data_root,'coco_casia_template_after_divide/train_src')
+                    src_path_list.append(path)
+                    self.template_coco_casia_gt_path = os.path.join(self.data_root, 'coco_casia_template_after_divide/train_gt')
+                else:
+                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    src_path_list.append(path)
+                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+
+        except Exception as e:
+            print(e)
+        ###########################################
+
+        # cod10k
+        try:
+            if using_data['cod10k']:
+                if train_mode:
+
+                    path = os.path.join(self.data_root, 'COD10K/train_src')
+                    src_path_list.append(path)
+                    self.COD10K_gt_path = os.path.join(self.data_root, 'COD10K/train_gt')
+
+                else:
+                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    src_path_list.append(path)
+                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+        except Exception as e:
+            print(e)
+        #############################################
+
+        # negative
+        try:
+            if using_data['negative']:
+                if train_mode:
+                    path = os.path.join(self.data_root, 'negative')
+                    src_path_list.append(path)
+                    self.negative_gt_path = os.path.join(self.data_root, 'negative_gt')
+                else:
+                    path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                    src_path_list.append(path)
+                    self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+        except Exception as e:
+            print(e)
+
+        # texture
+        try:
+            if using_data['texture_sp']:
+                if train_mode:
+                    path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_src')
+                    src_path_list.append(path)
+                    self.texture_sp_gt_path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_gt')
+                else:
+                    path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_src'
+                    src_path_list.append(path)
+                    self.texture_sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_gt'
+        except Exception as e:
+            print(e)
+
+        try:
+            if using_data['texture_cm']:
+                if train_mode:
+                    path = os.path.join(self.data_root, 'periodic_texture/divide/train_src')
+                    src_path_list.append(path)
+                    self.texture_cm_gt_path = os.path.join(self.data_root,
+                                                           'periodic_texture/divide/train_gt')
+                else:
+                    path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                    src_path_list.append(path)
+                    self.texture_cm_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+        except Exception as e:
+            print(e)
+
+        try:
+            if using_data['casia']:
+                if train_mode:
+                    pass
+                else:
+                    path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/src'
+                    src_path_list.append(path)
+                    self.casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/gt'
+
+        except Exception as e:
+            print(e)
+        ##################################################################################
+
+        # public dataset
+        try:
+            if using_data['coverage']:
+                if train_mode:
+                    pass
+                else:
+                    path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/src'
+                    src_path_list.append(path)
+                    self.coverage_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/gt'
+
+        except Exception as e:
+            print(e)
+
+        try:
+            if using_data['columb']:
+                path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
+                src_path_list.append(path)
+        except Exception as e:
+            print(e)
+        ##############################
 
         self.src_path_list = src_path_list
 
@@ -762,7 +726,7 @@ class AddGlobalBlur(object):
         """
         :param p: p的概率会加模糊
         """
-        kernel_size = random.randint(0, 15) / 10
+        kernel_size = random.randint(0, 10) / 10
         self.kernel_size = kernel_size
         self.p = p
 
@@ -815,31 +779,33 @@ class AddEdgeBlur(object):
 if __name__ == '__main__':
 
     print('start')
-    # mydataset = TamperDataset(using_data={'my_sp': False,
-    #                                       'my_cm': False,
-    #                                       'template_casia_casia': False,
-    #                                       'template_coco_casia': False,
-    #                                       'cod10k': False,
-    #                                       'casia': False,
-    #                                       'copy_move': False,
-    #                                       'columb': False,
-    #                                       'negative_coco': False,
-    #                                       'negative_casia': False,
-    #                                       }, train_val_test_mode='train')
-    mytestdataset = TamperDataset(using_data={'my_sp': False,
-                                              'my_cm': False,
-                                              'template_casia_casia': False,
-                                              'template_coco_casia': False,
-                                              'cod10k': False,
-                                              'casia': False,
-                                              'coverage': True,
-                                              'columb': False,
-                                              'negative_coco': False,
-                                              'negative_casia': False,
-                                              'texture_sp': False,
-                                              'texture_cm': False,
-                                              }, train_val_test_mode='test',stage_type='stage1')
-    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=1, num_workers=4)
+    mydataset = TamperDataset(using_data={'my_sp': True,
+                                          'my_cm': True,
+                                          'template_casia_casia': True,
+                                          'template_coco_casia': True,
+                                          'cod10k': True,
+                                          'casia': False,
+                                          'copy_move': False,
+                                          'texture_sp':True,
+                                          'texture_cm': True,
+                                          'columb': False,
+                                          'negative': True,
+                                          'negative_casia': False,
+                                          }, train_val_test_mode='train',stage_type='stage2')
+    # mytestdataset = TamperDataset(using_data={'my_sp': False,
+    #                                           'my_cm': False,
+    #                                           'template_casia_casia': False,
+    #                                           'template_coco_casia': False,
+    #                                           'cod10k': False,
+    #                                           'casia': False,
+    #                                           'coverage': True,
+    #                                           'columb': False,
+    #                                           'negative_coco': False,
+    #                                           'negative_casia': False,
+    #                                           'texture_sp': False,
+    #                                           'texture_cm': False,
+    #                                           }, train_val_test_mode='test',stage_type='stage1')
+    dataloader = torch.utils.data.DataLoader(mydataset, batch_size=1, num_workers=1)
     start = time.time()
     try:
         for idx, item in enumerate(track(dataloader)):
@@ -847,11 +813,10 @@ if __name__ == '__main__':
             print(item['relation_map'][0].shape)
             if item['tamper_image'].shape[1] !=3 or item['tamper_image'].shape[2]!=320:
                 rich.print(item['path'])
-                time.sleep(1)
 
-            # check_4dim_img_pair(item['tamper_image'], item['gt_band'])
-            # if idx == 3000:
-            #     break
+            check_4dim_img_pair(item['tamper_image'], item['gt_band'])
+            if idx == 3000:
+                break
     except Exception as e:
         # print(item['path'])
         print(e)
