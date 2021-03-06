@@ -43,7 +43,7 @@ parser.add_argument('--batch_size', default=6, type=int, metavar='BT',
 # =============== optimizer
 parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
-parser.add_argument('--resume', default=['/home/liu/chenhaoran/Mymodel/save_model/stage1_0119_template_cod10k_cm_sp_negative_texture_blur_train/0224_template_sp_negative_COD10K_texture_checkpoint9-stage1-0.294621-f10.706665-precision0.961146-acc0.974086-recall0.563570.pth',
+parser.add_argument('--resume', default=['',
                                          ''], type=list, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
@@ -51,7 +51,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=2, type=int,
+parser.add_argument('--stepsize', default=4, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -70,7 +70,7 @@ parser.add_argument('--gpu', default='0', type=str,
 # parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
-                    default='../save_model/stage1&2_0305_template_cod10k_cm_sp_negative_texture_blur_train')
+                    default='../save_model/0306_stage1&2_后缀为0306的模型')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -102,9 +102,9 @@ if not isdir(model_save_dir):
 # writer = SummaryWriter(
 #     'runs/' + '0105_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 writer = SummaryWriter(
-    '../runs/' + '0305_03-05_tensorboard_第二阶段联合训练_新的unet')
+    '../runs/' + '0306_stage1&2_后缀为0306的模型')
 email_header = 'Python'
-output_name_file_name = '0305_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
+output_name_file_name = '0306_stage1&2_后缀为0306的模型_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
 """"""""""""""""""""""""""""""
 "    ↑↑↑↑需要修改的参数↑↑↑↑     "
 """"""""""""""""""""""""""""""
@@ -169,7 +169,7 @@ def main():
     model2.apply(weights_init)
 
     # 模型可持续化
-    optimizer1 = optim.Adam(model1.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-8)
+    optimizer1 = optim.Adam(model1.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
     optimizer2 = optim.Adam(model2.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
     if args.resume[0]:
         if isfile(args.resume[0]):

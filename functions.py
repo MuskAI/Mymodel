@@ -11,8 +11,8 @@ def wce_dice_huber_loss(pred, gt):
     # print(pred.shape)
     loss1 = cross_entropy_loss(pred, gt)
     # loss1 = nn.BCEWithLogitsLoss()(pred, gt)
+    torch.nn.BCEWithLogitsLoss
     loss2 = DiceLoss()(pred, gt)
-
     return 0.5 * loss1 + 0.5 * loss2
 
 
