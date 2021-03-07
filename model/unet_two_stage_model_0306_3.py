@@ -3,7 +3,8 @@
 time: 03/06
 第三个版本：
 1.这个版本相对于第一个版本将bilinear改为了False
-2. 相对于第二个版本多了空洞卷积和
+2. aspp
+
 """
 import torch.nn.functional as F
 from torchsummary import summary
@@ -13,47 +14,7 @@ sys.path.append('')
 import torch.nn as nn
 import numpy as np
 from unet_parts import *
-
-class SRMConv(nn.Module):
-    def __init__(self, channels=3, kernel='filter1'):
-        super(SRMConv, self).__init__()
-        self.channels = channels
-        q = [4.0, 12.0, 2.0]
-        filter1 = [[0, 0, 0, 0, 0],
-                   [0, -1, 2, -1, 0],
-                   [0, 2, -4, 2, 0],
-                   [0, -1, 2, -1, 0],
-                   [0, 0, 0, 0, 0]]
-        filter2 = [[-1, 2, -2, 2, -1],
-                   [2, -6, 8, -6, 2],
-                   [-2, 8, -12, 8, -2],
-                   [2, -6, 8, -6, 2],
-                   [-1, 2, -2, 2, -1]]
-        filter3 = [[0, 0, 0, 0, 0],
-                   [0, 0, 0, 0, 0],
-                   [0, 1, -2, 1, 0],
-                   [0, 0, 0, 0, 0],
-                   [0, 0, 0, 0, 0]]
-        filter1 = np.asarray(filter1, dtype=float) / q[0]
-        filter2 = np.asarray(filter2, dtype=float) / q[1]
-        filter3 = np.asarray(filter3, dtype=float) / q[2]
-        if kernel == 'filter1':
-            kernel = filter1
-        elif kernel =='filter2':
-            kernel = filter2
-        elif kernel == 'filter3':
-            kernel = filter3
-        else:
-            print('kernel error')
-            exit(0)
-        kernel = torch.FloatTensor(kernel).unsqueeze(0).unsqueeze(0)
-        kernel = np.repeat(kernel, self.channels, axis=0)
-        self.weight = nn.Parameter(data=kernel, requires_grad=False).cuda()
-
-    def __call__(self, x):
-        x = F.conv2d(x, self.weight, padding=2, groups=self.channels)
-        return x
-
+from aspp import ASPP
 
 class UNetStage1(nn.Module):
     def __init__(self, n_channels=3, bilinear=False):
@@ -62,7 +23,8 @@ class UNetStage1(nn.Module):
         self.n_classes = 1
         self.bilinear = bilinear
 
-        self.inc = DilateDoubleConv(n_channels, 64)
+        # self.inc = DoubleConv(n_channels, 64)
+        self.aspp = ASPP(in_channels=3, out_channels=64, atrous_rates=[1,6,12])
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.down3 = Down(256, 512)
@@ -76,7 +38,8 @@ class UNetStage1(nn.Module):
 
 
     def forward(self, x):
-        x1 = self.inc(x)
+        # x1 = self.inc(x)
+        x1 = self.aspp(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
@@ -97,7 +60,8 @@ class UNetStage2(nn.Module):
         self.n_classes = 1
         self.bilinear = bilinear
 
-        self.inc = DilateDoubleConv(n_channels, 64)
+        # self.inc = DoubleConv(n_channels, 64)
+        self.aspp = ASPP(in_channels=3, out_channels=64, atrous_rates=[6, 12, 18])
         self.maxpool = MaxPool()
         self.down1 = Down_no_pool(64, 128)
         self.down2 = Down_no_pool(128, 256)
@@ -131,10 +95,8 @@ class UNetStage2(nn.Module):
         self.final = RelationFuse(in_channels=16 + 8, out_channels=1)
 
     def forward(self, x, stage3, stage2, stage1):
-        noise_3dim1 = SRMConv(kernel='kernel1')(x[1])
-        src_noise = torch.cat((x[],noise_3dim1),1)
-        x1 = self.inc(x)
-
+        # x1 = self.inc(x)
+        x1 = self.aspp(x)
         # fuse stage
         x2 = self.maxpool(x1)
         x2 = self.fuse2(x2, stage1)
@@ -189,8 +151,8 @@ class UNetStage2(nn.Module):
 if __name__ == '__main__':
     model1 = UNetStage1(3,bilinear=False).cpu()
     model2 = UNetStage2(4, bilinear=False).cpu()
-    in_size = 321
+    in_size = 320
     # summary(model=model1,(3,320,320),device='cpu',batch_size=2)
-    summary(model2, [(4, in_size, in_size),(512, in_size // 8, in_size // 8),(256, in_size // 4, in_size // 4)
-                    , (128, in_size // 2, in_size // 2) ], device='cpu', batch_size=2)
-    # summary(model1, (3, 321, 321), device='cpu', batch_size=2)
+    # summary(model2, [(4, in_size, in_size),(512, in_size // 8, in_size // 8),(256, in_size // 4, in_size // 4)
+    #                 , (128, in_size // 2, in_size // 2) ], device='cpu', batch_size=2)
+    summary(model1, (3, 321, 321), device='cpu', batch_size=2)

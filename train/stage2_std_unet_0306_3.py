@@ -24,7 +24,7 @@ from os.path import join, split, isdir, isfile, splitext, split, abspath, dirnam
 Created by HaoRan
 time: 2021/01/29
 description:
-1. 单独训练stage 2
+1. 先训练stage1
 """
 
 """"""""""""""""""""""""""""""
@@ -65,7 +65,7 @@ parser.add_argument('--gpu', default='0', type=str,
 # parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
-                    default='/data-output/0306_stage1&2_后缀为0306_2的模型')
+                    default='../save_model/0306_stage1&2_后缀为0306_3的模型')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -97,9 +97,9 @@ if not isdir(model_save_dir):
 # writer = SummaryWriter(
 #     'runs/' + '0105_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 writer = SummaryWriter(
-    '../runs/' + '0306_stage1&2_后缀为0306_2的模型')
+    '../runs/' + '0306_stage1&2_后缀为0306_3的模型')
 email_header = 'Python'
-output_name_file_name = '0306_stage1&2_后缀为0306_2的模型_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
+output_name_file_name = '0306_stage1&2_后缀为0306_3的模型_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
 """"""""""""""""""""""""""""""
 "    ↑↑↑↑需要修改的参数↑↑↑↑     "
 """"""""""""""""""""""""""""""

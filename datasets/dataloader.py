@@ -353,7 +353,9 @@ class MixData:
         if device=='413':
             self.data_root = '/home/liu/chenhaoran/Tamper_Data/3月最新数据'
         elif device=='jly':
-            self.data_root = '/data-input/3月最新数据'
+            self.data_root = '/data-tmp/3月最新数据'
+        elif device=='libiao':
+            self.data_root = '/media/libiao/1385DB3ECD51D467/chenhaoran/3月最新数据'
         # data_path_gather的逻辑是返回一个字典，该字典包含了需要使用的src 和 gt
         data_dict = MixData.__data_path_gather(self, train_mode=train_mode, using_data=using_data)
         # src
@@ -522,7 +524,8 @@ class MixData:
             gt_path = os.path.join(self.COD10K_gt_path, gt_path)
 
         elif type[0] == 'COVERAGE':
-            gt_path = name.split('.')[0] + '_gt.bmp'
+            # gt_path = name.split('.')[0] + '_gt.bmp'
+            gt_path = name.replace('t','forged')
             gt_path = os.path.join(self.coverage_gt_path, gt_path)
         elif type[0] == 'TEXTURE_CM':
             gt_path = name.split('.')[0] + '.bmp'
@@ -699,9 +702,9 @@ class MixData:
                 if train_mode:
                     pass
                 else:
-                    path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/src'
+                    path = os.path.join(self.data_root, 'public_dataset/coverage/src')
                     src_path_list.append(path)
-                    self.coverage_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/coverage/gt'
+                    self.coverage_gt_path = os.path.join(self.data_root, 'public_dataset/coverage/gt')
 
         except Exception as e:
             print(e)
@@ -791,7 +794,7 @@ if __name__ == '__main__':
                                           'columb': False,
                                           'negative': True,
                                           'negative_casia': False,
-                                          }, train_val_test_mode='train',stage_type='stage2')
+                                          }, train_val_test_mode='train',stage_type='stage2',device='jly')
     # mytestdataset = TamperDataset(using_data={'my_sp': False,
     #                                           'my_cm': False,
     #                                           'template_casia_casia': False,

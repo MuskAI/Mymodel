@@ -65,7 +65,7 @@ parser.add_argument('--gpu', default='0', type=str,
 # parser.add_argument('--tmp', help='tmp folder', default='tmp/HED')
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
-                    default='/data-output/0306_stage1&2_后缀为0306_2的模型')
+                    default='../save_model/0306_stage1&2_后缀为0306_2的模型')
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
@@ -97,7 +97,7 @@ if not isdir(model_save_dir):
 # writer = SummaryWriter(
 #     'runs/' + '0105_%d-%d_tensorboard' % (datetime.datetime.now().month, datetime.datetime.now().day))
 writer = SummaryWriter(
-    '../runs/' + '0306_stage1&2_后缀为0306_2的模型')
+    '/data-output/' + '0306_stage1&2_后缀为0306_2的模型')
 email_header = 'Python'
 output_name_file_name = '0306_stage1&2_后缀为0306_2的模型_checkpoint%d-two_stage-%f-f1%f-precision%f-acc%f-recall%f.pth'
 """"""""""""""""""""""""""""""
@@ -147,7 +147,7 @@ def main():
                                                   pin_memory=False)
     valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size, num_workers=6)
 
-    testDataLoader = torch.utils.data.DataLoader(testData, batch_size=args.batch_size, num_workers=0)
+    testDataLoader = torch.utils.data.DataLoader(testData, batch_size=1, num_workers=0)
     # model
     model1 = Net1()
     model2 = Net2()
@@ -196,8 +196,11 @@ def main():
                           dataParser=trainDataLoader, epoch=epoch)
 
         val_avg = val(model1=model1, model2=model2, dataParser=valDataLoader, epoch=epoch)
-        test_avg = test(model1=model1, model2=model2, dataParser=testDataLoader, epoch=epoch)
-
+        try:
+            test_avg = test(model1=model1, model2=model2, dataParser=testDataLoader, epoch=epoch)
+        except Exception as e:
+            print(e)
+            pass
         """"""""""""""""""""""""""""""
         "          写入图             "
         """"""""""""""""""""""""""""""
