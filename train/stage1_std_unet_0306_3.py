@@ -134,9 +134,9 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train')
-    valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val')
-    testData = TamperDataset(stage_type='stage1', using_data=using_data_test, train_val_test_mode='test')
+    trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train',device='libiao')
+    valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val',device='libiao')
+    testData = TamperDataset(stage_type='stage1', using_data=using_data_test, train_val_test_mode='test',device='libiao')
 
     # 3 specific dataloader
     trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=4, shuffle=True,
