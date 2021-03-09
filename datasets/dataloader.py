@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-from check_image_pair import check_4dim_img_pair
+# from check_image_pair import check_4dim_img_pair
 from PIL import ImageFilter
 import random
 from rich.progress import track
@@ -95,9 +95,14 @@ class TamperDataset(Dataset):
         except Exception as e:
             traceback.print_exc(e)
         # check the src dim
-        if len(img.split()) != 3 or img.size !=(320,320) or gt.size !=(320,320):
-            rich.print(tamper_path, 'error')
-            rich.print(gt_path)
+        if mode=='test':
+            if len(img.split()) != 3:
+                rich.print(tamper_path, 'error')
+                rich.print(gt_path)
+        else:
+            if len(img.split()) != 3 or img.size !=(320,320) or gt.size !=(320,320):
+                rich.print(tamper_path, 'error')
+                rich.print(gt_path)
         ##############################################
 
         # check the gt dim
@@ -782,44 +787,51 @@ class AddEdgeBlur(object):
 if __name__ == '__main__':
 
     print('start')
-    mydataset = TamperDataset(using_data={'my_sp': True,
-                                          'my_cm': True,
-                                          'template_casia_casia': True,
-                                          'template_coco_casia': True,
-                                          'cod10k': True,
-                                          'casia': False,
-                                          'copy_move': False,
-                                          'texture_sp':True,
-                                          'texture_cm': True,
-                                          'columb': False,
-                                          'negative': True,
-                                          'negative_casia': False,
-                                          }, train_val_test_mode='train',stage_type='stage2',device='jly')
-    # mytestdataset = TamperDataset(using_data={'my_sp': False,
-    #                                           'my_cm': False,
-    #                                           'template_casia_casia': False,
-    #                                           'template_coco_casia': False,
-    #                                           'cod10k': False,
-    #                                           'casia': False,
-    #                                           'coverage': True,
-    #                                           'columb': False,
-    #                                           'negative_coco': False,
-    #                                           'negative_casia': False,
-    #                                           'texture_sp': False,
-    #                                           'texture_cm': False,
-    #                                           }, train_val_test_mode='test',stage_type='stage1')
-    dataloader = torch.utils.data.DataLoader(mydataset, batch_size=1, num_workers=1)
+    # mydataset = TamperDataset(using_data={'my_sp': True,
+    #                                       'my_cm': True,
+    #                                       'template_casia_casia': True,
+    #                                       'template_coco_casia': True,
+    #                                       'cod10k': True,
+    #                                       'casia': False,
+    #                                       'copy_move': False,
+    #                                       'texture_sp':True,
+    #                                       'texture_cm': True,
+    #                                       'columb': False,
+    #                                       'negative': True,
+    #                                       'negative_casia': False,
+    #                                       }, train_val_test_mode='train',stage_type='stage2',device='jly')
+    mytestdataset = TamperDataset(using_data={'my_sp': False,
+                                              'my_cm': False,
+                                              'template_casia_casia': False,
+                                              'template_coco_casia': False,
+                                              'cod10k': False,
+                                              'casia': False,
+                                              'coverage': True,
+                                              'columb': False,
+                                              'negative_coco': False,
+                                              'negative_casia': False,
+                                              'texture_sp': False,
+                                              'texture_cm': False,
+                                              }, train_val_test_mode='test',stage_type='stage1',device='libiao')
+    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=1, num_workers=1)
     start = time.time()
     try:
         for idx, item in enumerate(track(dataloader)):
             # print(idx, type(item))
-            print(item['relation_map'][0].shape)
-            if item['tamper_image'].shape[1] !=3 or item['tamper_image'].shape[2]!=320:
-                rich.print(item['path'])
+            # print(item['relation_map'][0].shape)
+            # if item['tamper_image'].shape[1] !=3 or item['tamper_image'].shape[2]!=320:
+            #     rich.print(item['path'])
 
-            check_4dim_img_pair(item['tamper_image'], item['gt_band'])
-            if idx == 3000:
-                break
+            # check_4dim_img_pair(item['tamper_image'], item['gt_band'])
+            # if idx == 3000:
+            #     break
+
+            if item['tamper_image'].shape[2:] !=item['gt_band'].shape[2:]:
+                # print('++++++')
+                # print(item['tamper_image'].shape)
+                # print(item['gt_band'].shape)
+                print(item['path'])
+
     except Exception as e:
         # print(item['path'])
         print(e)

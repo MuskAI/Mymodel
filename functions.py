@@ -157,6 +157,14 @@ def cross_entropy_loss(prediction, label):
     cost = torch.nn.functional.binary_cross_entropy(
             prediction.float(),label.float(), weight=mask)
     return cost
+
+def map8_loss_ce(prediction, label):
+    label = label.long()
+    cost = torch.nn.functional.binary_cross_entropy(
+            prediction.float(), label.float())
+    
+    return cost
+
 def weighted_nll_loss(prediction, label):
     label = torch.squeeze(label.long(), dim=0)
     nch = prediction.shape[1]

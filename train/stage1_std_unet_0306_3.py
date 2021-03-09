@@ -37,7 +37,7 @@ description:
 """"""""""""""""""""""""""""""
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=12, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=10, type=int, metavar='BT',
                     help='batch size')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
                     default='../save_model/stage1_0306_3_aspp')
@@ -112,7 +112,7 @@ def main():
     using_data = {'my_sp': True,
                   'my_cm': True,
                   'template_casia_casia': True,
-                  'template_coco_casia': True,
+                  'template_coco_casia': False,
                   'cod10k': True,
                   'casia': False,
                   'copy_move': False,
@@ -122,6 +122,20 @@ def main():
                   'negative': True,
                   'negative_casia': False,
                   }
+    # using_data = {'my_sp': False,
+    #               'my_cm': False,
+    #               'template_casia_casia': False,
+    #               'template_coco_casia': False,
+    #               'cod10k': True,
+    #               'casia': False,
+    #               'copy_move': False,
+    #               'texture_sp': False,
+    #               'texture_cm': False,
+    #               'columb': False,
+    #               'negative': False,
+    #               'negative_casia': False,
+    #               }
+
     using_data_test = {'my_sp': False,
                        'my_cm': False,
                        'template_casia_casia': False,
@@ -184,6 +198,7 @@ def main():
     for epoch in range(args.start_epoch, args.maxepoch):
         train_avg = train(model=model, optimizer=optimizer, dataParser=trainDataLoader, epoch=epoch)
         val_avg = val(model=model, dataParser=valDataLoader, epoch=epoch)
+
         test_avg = test(model=model, dataParser=testDataLoader, epoch=epoch)
 
         """"""""""""""""""""""""""""""
@@ -406,7 +421,7 @@ def val(model, dataParser, epoch):
             loss_8t = torch.zeros(())
 
         # 网络输出
-        outputs = model(images)
+        outputs = model(images)[0]
         # 这里放保存中间结果的代码
         if args.save_mid_result:
             if batch_index in args.mid_result_index:
@@ -506,13 +521,16 @@ def test(model, dataParser, epoch):
             loss_8t = torch.zeros(())
 
         # 网络输出
-        outputs = model(images)
+        try:
+            outputs = model(images)[0]
 
-        """"""""""""""""""""""""""""""
-        "         Loss 函数           "
-        """"""""""""""""""""""""""""""
+            """"""""""""""""""""""""""""""
+            "         Loss 函数           "
+            """"""""""""""""""""""""""""""
 
-        loss = wce_dice_huber_loss(outputs, labels)
+            loss = wce_dice_huber_loss(outputs, labels)
+        except Exception as e:
+            continue
         writer.add_scalar('val_fuse_loss_per_epoch', loss.item(),
                           global_step=epoch * test_epoch + batch_index)
 

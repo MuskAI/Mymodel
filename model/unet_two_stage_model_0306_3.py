@@ -13,7 +13,7 @@ import sys
 sys.path.append('')
 import torch.nn as nn
 import numpy as np
-from unet_parts import *
+from .unet_parts import *
 from aspp import ASPP
 
 class UNetStage1(nn.Module):
@@ -150,9 +150,9 @@ class UNetStage2(nn.Module):
 
 if __name__ == '__main__':
     model1 = UNetStage1(3,bilinear=False).cpu()
-    model2 = UNetStage2(4, bilinear=False).cpu()
+    # model2 = UNetStage2(4, bilinear=False).cpu()
     in_size = 320
     # summary(model=model1,(3,320,320),device='cpu',batch_size=2)
     # summary(model2, [(4, in_size, in_size),(512, in_size // 8, in_size // 8),(256, in_size // 4, in_size // 4)
     #                 , (128, in_size // 2, in_size // 2) ], device='cpu', batch_size=2)
-    summary(model1, (3, 321, 321), device='cpu', batch_size=2)
+    summary(model1, (3, 433, 313), device='cpu', batch_size=2)

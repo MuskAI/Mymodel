@@ -14,7 +14,7 @@ import torch.utils.data.dataloader
 import argparse
 import time
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
-    wce_huber_loss_8, my_recall_score, debug_ce, cross_entropy_loss, wce_dice_huber_loss
+    wce_huber_loss_8, my_recall_score, cross_entropy_loss, wce_dice_huber_loss
 from datasets.dataloader import TamperDataset
 from model.unet_model import UNet as Net
 from torch.optim import lr_scheduler
