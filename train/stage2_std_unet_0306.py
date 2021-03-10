@@ -46,7 +46,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=4, type=int,
+parser.add_argument('--stepsize', default=3, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -66,7 +66,6 @@ parser.add_argument('--gpu', default='0', type=str,
 parser.add_argument('--mid_result_root', type=str, help='mid_result_root', default='./save')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
                     default='../save_model/'+name)
-parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
 parser.add_argument('--per_epoch_freq', type=int, help='per_epoch_freq', default=50)
 
 parser.add_argument('--fuse_loss_weight', type=int, help='fuse_loss_weight', default=12)

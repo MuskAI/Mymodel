@@ -14,7 +14,7 @@ sys.path.append('')
 import torch.nn as nn
 import numpy as np
 from .unet_parts import *
-from aspp import ASPP
+from .aspp import ASPP
 
 class UNetStage1(nn.Module):
     def __init__(self, n_channels=3, bilinear=False):
@@ -61,7 +61,7 @@ class UNetStage2(nn.Module):
         self.bilinear = bilinear
 
         # self.inc = DoubleConv(n_channels, 64)
-        self.aspp = ASPP(in_channels=3, out_channels=64, atrous_rates=[6, 12, 18])
+        self.aspp = ASPP(in_channels=6, out_channels=64, atrous_rates=[6, 12, 18])
         self.maxpool = MaxPool()
         self.down1 = Down_no_pool(64, 128)
         self.down2 = Down_no_pool(128, 256)

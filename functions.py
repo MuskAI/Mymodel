@@ -6,13 +6,16 @@ import torch.nn.functional as F
 
 
 
+def smooth_l1_loss(prediction, label):
+    return torch.nn.SmoothL1Loss()(prediction,label)
+
 def wce_dice_huber_loss(pred, gt):
     # print(gt.shape)
     # print(pred.shape)
     loss1 = cross_entropy_loss(pred, gt)
-    # loss1 = nn.BCEWithLogitsLoss()(pred, gt)
     loss2 = DiceLoss()(pred, gt)
-    return 0.6 * loss1 + 0.4 * loss2
+    loss3 = smooth_l1_loss(pred, gt)
+    return 0.6 * loss1 + 0.15 * loss2 + 0.15 * loss3
 
 
 
@@ -159,10 +162,7 @@ def cross_entropy_loss(prediction, label):
     return cost
 
 def map8_loss_ce(prediction, label):
-    label = label.long()
-    cost = torch.nn.functional.binary_cross_entropy(
-            prediction.float(), label.float())
-    
+    cost = cross_entropy_loss(prediction,label)
     return cost
 
 def weighted_nll_loss(prediction, label):
@@ -199,9 +199,6 @@ def weighted_cross_entropy_loss(prediction, label, output_mask=False):
 def l1_loss(prediction,label):
     return torch.nn.L1Loss()(prediction,label)
 
-
-def smooth_l1_loss(prediction, label):
-    return torch.nn.SmoothL1Loss()(prediction,label)
 
 def CE_loss(prediction,label):
     cost = torch.nn.functional.binary_cross_entropy(prediction,label)
