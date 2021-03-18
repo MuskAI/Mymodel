@@ -366,7 +366,7 @@ class MixData:
         elif device == 'wkl':
             self.data_root = 'D:\\chenhaoran\\data'
         elif device == 'ai500':
-            self.data_root = '/hy-tmp/3月最新数据'
+            self.data_root = '/home/dc2-user/chenhaoran/3月份最新数据'
         # data_path_gather的逻辑是返回一个字典，该字典包含了需要使用的src 和 gt
         data_dict = MixData.__data_path_gather(self, train_mode=train_mode, using_data=using_data)
         # src
