@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torchsummary import summary
 import sys
 
-sys.path.append('')
+sys.path.append('.')
 import torch.nn as nn
 from .unet_parts import *
 
@@ -19,7 +19,7 @@ class UNetStage1(nn.Module):
         super(UNetStage1, self).__init__()
         factor = 2 if bilinear else 1
         _factor = 1 if bilinear else 2
-        print('factor is : ',_factor)
+        # print('factor is : ',_factor)
         self.n_channels = n_channels
         self.n_classes = 1
         self.bilinear = bilinear
@@ -52,7 +52,7 @@ class UNetStage1(nn.Module):
         # return logits
 
 class UNetStage2(nn.Module):
-    def __init__(self, n_channels=6, bilinear=False):
+    def __init__(self, n_channels=4, bilinear=False):
         super(UNetStage2, self).__init__()
         factor = 2 if bilinear else 1
         _factor = 1 if bilinear else 2
@@ -138,17 +138,6 @@ class UNetStage2(nn.Module):
         x = torch.cat([r1, r2, r3, r4, r5, r6, r7, r8, with_r], dim=1)
         x = self.final(x)
 
-        x = nn.Sigmoid()(x)
-
-        r1 = nn.Sigmoid()(r1)
-        r2 = nn.Sigmoid()(r2)
-        r3 = nn.Sigmoid()(r3)
-        r4 = nn.Sigmoid()(r4)
-
-        r5 = nn.Sigmoid()(r5)
-        r6 = nn.Sigmoid()(r6)
-        r7 = nn.Sigmoid()(r7)
-        r8 = nn.Sigmoid()(r8)
         return [x, r1, r2, r3, r4, r5, r6, r7, r8]
 
 

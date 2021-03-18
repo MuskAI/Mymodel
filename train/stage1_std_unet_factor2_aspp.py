@@ -35,9 +35,9 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0310_stage1_后缀为0306_3的模型aspp第一阶段'
+name = '0317_stage1_后缀为0306_3的模型aspp第二阶段_全部数据'
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=12, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=6, type=int, metavar='BT',
                     help='batch size')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
                     default='../save_model/'+name)
@@ -48,7 +48,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=4, type=int,
+parser.add_argument('--stepsize', default=3, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -64,7 +64,7 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
 #####################resume##########################
-parser.add_argument('--resume', default='/data-tmp/Mymodel/save_model/0309_stage1&2_后缀为0306_3的模型_aspp两阶段联合训练使用了第一阶段的预训练模型/stage1_0309_stage1&2_后缀为0306_3的模型_aspp两阶段联合训练使用了第一阶段的预训练模型_checkpoint1-two_stage-0.127363-f10.762514-precision0.864816-acc0.988212-recall0.700724.pth', type=str, metavar='PATH',
+parser.add_argument('--resume', default='/data-tmp/Mymodel/save_model/0310_stage1_后缀为0306_3的模型aspp第一阶段_全部数据/0310_stage1_后缀为0306_3的模型aspp第一阶段_checkpoint76-stage1-0.154597-f10.770403-precision0.886410-acc0.970743-recall0.685445.pth', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
@@ -117,7 +117,7 @@ def main():
                   'casia': False,
                   'coverage': False,
                   'columb': False,
-                  'negative': False,
+                  'negative': True,
                   'negative_casia': False,
                   'texture_sp': True,
                   'texture_cm': True,
@@ -184,7 +184,7 @@ def main():
     for epoch in range(args.start_epoch, args.maxepoch):
         train_avg = train(model=model, optimizer=optimizer, dataParser=trainDataLoader, epoch=epoch)
         val_avg = val(model=model, dataParser=valDataLoader, epoch=epoch)
-        test_avg = test(model=model, dataParser=testDataLoader, epoch=epoch)
+        test(model=model, dataParser=testDataLoader, epoch=epoch)
 
         """"""""""""""""""""""""""""""
         "          写入图            "
@@ -193,24 +193,19 @@ def main():
 
             writer.add_scalar('lr_per_epoch', scheduler.get_lr(), global_step=epoch)
             writer.add_scalars('tr-val-test_avg_loss_per_epoch', {'train': train_avg['loss_avg'],
-                                                                  'val': val_avg['loss_avg'],
-                                                                  'test': test_avg['loss_avg']},
+                                                                  'val': val_avg['loss_avg']},
                                global_step=epoch)
             writer.add_scalars('tr-val-test_avg_f1_per_epoch', {'train': train_avg['f1_avg'],
-                                                                'val': val_avg['f1_avg'],
-                                                                'test': test_avg['f1_avg']}, global_step=epoch)
+                                                                'val': val_avg['f1_avg']}, global_step=epoch)
 
             writer.add_scalars('tr-val-test_avg_precision_per_epoch', {'train': train_avg['precision_avg'],
-                                                                       'val': val_avg['precision_avg'],
-                                                                       'test': test_avg['precision_avg']},
+                                                                       'val': val_avg['precision_avg']},
                                global_step=epoch)
             writer.add_scalars('tr-val-test_avg_acc_per_epoch', {'train': train_avg['accuracy_avg'],
-                                                                 'val': val_avg['accuracy_avg'],
-                                                                 'test': test_avg['accuracy_avg']},
+                                                                 'val': val_avg['accuracy_avg']},
                                global_step=epoch)
             writer.add_scalars('tr-val-test_avg_recall_per_epoch', {'train': train_avg['recall_avg'],
-                                                                    'val': val_avg['recall_avg'],
-                                                                    'test': test_avg['recall_avg']},
+                                                                    'val': val_avg['recall_avg']},
                                global_step=epoch)
 
 
@@ -387,7 +382,7 @@ def val(model, dataParser, epoch):
             loss = torch.zeros(1)
             loss_8t = torch.zeros(())
         # 网络输出
-        outputs = model(images)
+        outputs = model(images)[0]
         # 这里放保存中间结果的代码
         if args.save_mid_result:
             if batch_index in args.mid_result_index:
@@ -456,7 +451,7 @@ def test(model, dataParser, epoch):
         if torch.cuda.is_available():
             images = images.cuda()
         # 网络输出
-        outputs = model(images)
+        outputs = model(images)[0]
         writer.add_images('test_image_batch:%d' % (batch_index), outputs, global_step=epoch)
         ################################
 

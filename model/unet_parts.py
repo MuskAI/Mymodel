@@ -94,7 +94,7 @@ class RelationMap(nn.Module):
             nn.ReLU(),
             nn.Conv2d(16, out_channels=out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -117,7 +117,7 @@ class RelationFuse(nn.Module):
             nn.ReLU(),
             nn.Conv2d(8, out_channels, kernel_size=1),
             nn.BatchNorm2d(1),
-            nn.ReLU(),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):

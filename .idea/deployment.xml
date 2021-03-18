@@ -1,11 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="liu@123.207.223.60:1154" showNewOnSourceInSync="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="10.21.243.54" showNewOnSourceInSync="false">
     <serverData>
-      <paths name="liu@123.207.223.60:1154">
+      <paths name="10.21.243.54">
         <serverdata>
           <mappings>
             <mapping deploy="/home/liu/chenhaoran/Mymodel" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="liu@123.207.223.60:11129">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="liu@123.207.223.60:1154 (2)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

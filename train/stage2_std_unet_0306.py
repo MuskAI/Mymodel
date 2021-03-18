@@ -29,17 +29,17 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0308_stage1&2_后缀为0306的模型,两阶段联合训练'
+name = '0311_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=6, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
 parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
-parser.add_argument('--resume', default=['/home/liu/chenhaoran/Mymodel/save_model/0308_stage1&2_后缀为0306的模型,两阶段联合训练/stage10308_stage1&2_后缀为0306的模型,两阶段联合训练_checkpoint1-two_stage-0.321772-f10.492543-precision0.977812-acc0.977794-recall0.330772.pth',
-                                         '/home/liu/chenhaoran/Mymodel/save_model/0308_stage1&2_后缀为0306的模型,两阶段联合训练/stage20308_stage1&2_后缀为0306的模型,两阶段联合训练_checkpoint1-two_stage-0.321772-f10.492543-precision0.977812-acc0.977794-recall0.330772.pth'], type=list, metavar='PATH',
+parser.add_argument('--resume', default=['/home/liu/chenhaoran/Mymodel/save_model/0310_stage1_后缀为0306的模型,fine第一阶段/0310_stage1_后缀为0306的模型,fine第一阶段_checkpoint14-stage1-0.149686-f10.803932-precision0.943530-acc0.989415-recall0.704037.pth',
+                                         '/home/liu/chenhaoran/Mymodel/save_model/0308_stage1&2_后缀为0306的模型,两阶段联合训练/stage2_0308_stage1&2_后缀为0306的模型,两阶段联合训练_checkpoint7-two_stage-0.316207-f10.365158-precision0.970866-acc0.985067-recall0.230217.pth'], type=list, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -175,7 +175,7 @@ def main():
     model2.apply(weights_init)
 
     # 模型可持续化
-    optimizer1 = optim.Adam(model1.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
+    optimizer1 = optim.Adam(model1.parameters(), lr=1e-6, betas=(0.9, 0.999), eps=1e-8)
     optimizer2 = optim.Adam(model2.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-8)
 
 
@@ -402,25 +402,26 @@ def train(model1, model2, optimizer1,optimizer2, dataParser, epoch):
             loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
-            _loss_stage_2 = wce_dice_huber_loss(two_stage_outputs[0], labels_dou_edge) * 12
+            loss_stage_2 = wce_dice_huber_loss(two_stage_outputs[0], labels_dou_edge)
 
             for c_index, c in enumerate(two_stage_outputs[1:9]):
                 one_loss_t = map8_loss_ce(c, relation_map[c_index].cuda())
                 loss_8t += one_loss_t
+                # print(one_loss_t)
                 map8_loss_value[c_index].update(one_loss_t.item())
 
-            _loss_stage_2 += loss_8t
-            loss_stage_2 = _loss_stage_2 / 20
-            loss = (loss_stage_1 + loss_stage_2)/2
+            # print(loss_stage_2)
+            # print(map8_loss_value)
+            loss = loss_stage_2 + loss_8t*10
             #######################################
             # 总的LOSS
             # print(type(loss_stage_2.item()))
             writer.add_scalars('loss_gather', {'stage_one_loss':loss_stage_1.item(),
-                                             'stage_two_fuse_loss':loss_stage_2.item(),
-                                             'fuse_loss_per_epoch':loss.item()}, global_step=epoch * train_epoch + batch_index)
+                                             'stage_two_fuse_loss':loss_stage_2.item()
+                                             }, global_step=epoch * train_epoch + batch_index)
             ##########################################
-
             loss.backward()
+
             optimizer1.step()
             optimizer2.step()
 

@@ -52,7 +52,7 @@ class UNetStage1(nn.Module):
         return [logits, stage_x1, stage_x2, stage_x3]
 
 class UNetStage2(nn.Module):
-    def __init__(self, n_channels=6, bilinear=False):
+    def __init__(self, n_channels=4, bilinear=False):
         super(UNetStage2, self).__init__()
         factor = 2 if bilinear else 1
         _factor = 1 if bilinear else 2
@@ -61,7 +61,7 @@ class UNetStage2(nn.Module):
         self.bilinear = bilinear
 
         # self.inc = DoubleConv(n_channels, 64)
-        self.aspp = ASPP(in_channels=6, out_channels=64, atrous_rates=[6, 12, 18])
+        self.aspp = ASPP(in_channels=n_channels, out_channels=64, atrous_rates=[6, 12, 18])
         self.maxpool = MaxPool()
         self.down1 = Down_no_pool(64, 128)
         self.down2 = Down_no_pool(128, 256)
@@ -133,18 +133,6 @@ class UNetStage2(nn.Module):
         with_r = self.with_relation(x)
         x = torch.cat([r1, r2, r3, r4, r5, r6, r7, r8, with_r], dim=1)
         x = self.final(x)
-
-        x = nn.Sigmoid()(x)
-
-        r1 = nn.Sigmoid()(r1)
-        r2 = nn.Sigmoid()(r2)
-        r3 = nn.Sigmoid()(r3)
-        r4 = nn.Sigmoid()(r4)
-
-        r5 = nn.Sigmoid()(r5)
-        r6 = nn.Sigmoid()(r6)
-        r7 = nn.Sigmoid()(r7)
-        r8 = nn.Sigmoid()(r8)
         return [x, r1, r2, r3, r4, r5, r6, r7, r8]
 
 

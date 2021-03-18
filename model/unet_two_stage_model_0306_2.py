@@ -130,17 +130,6 @@ class UNetStage2(nn.Module):
         x = torch.cat([r1, r2, r3, r4, r5, r6, r7, r8, with_r], dim=1)
         x = self.final(x)
 
-        x = nn.Sigmoid()(x)
-
-        r1 = nn.Sigmoid()(r1)
-        r2 = nn.Sigmoid()(r2)
-        r3 = nn.Sigmoid()(r3)
-        r4 = nn.Sigmoid()(r4)
-
-        r5 = nn.Sigmoid()(r5)
-        r6 = nn.Sigmoid()(r6)
-        r7 = nn.Sigmoid()(r7)
-        r8 = nn.Sigmoid()(r8)
         return [x, r1, r2, r3, r4, r5, r6, r7, r8]
 
 

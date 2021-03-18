@@ -158,7 +158,7 @@ def cross_entropy_loss(prediction, label):
     mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
     cost = torch.nn.functional.binary_cross_entropy(
-            prediction.float(),label.float(), weight=mask)
+            prediction.float(), label.float(), weight=mask)
     return cost
 
 def map8_loss_ce(prediction, label):
@@ -222,7 +222,7 @@ def my_precision_score(prediction,label):
     y = np.array(y.cpu().detach())
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
-    return precision_score(y, l, zero_division=1)
+    return precision_score(y_pred=y,y_true=l, zero_division=1)
 
 def my_acc_score(prediction,label):
     y = prediction.reshape(-1)
@@ -230,7 +230,7 @@ def my_acc_score(prediction,label):
     y = np.array(y.cpu().detach())
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
-    return accuracy_score(y,l)
+    return accuracy_score(y_pred=y,y_true=l)
 
 def my_f1_score(prediction,label):
 
@@ -241,7 +241,7 @@ def my_f1_score(prediction,label):
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
 
-    return f1_score(y,l,zero_division=1)
+    return f1_score(y_pred=y,y_true=l,zero_division=1)
 
 def my_recall_score(prediction,label):
 
@@ -251,7 +251,7 @@ def my_recall_score(prediction,label):
     y = np.where(y > 0.5, 1, 0).astype('int')
     l = np.array(l.cpu().detach()).astype('int')
 
-    return recall_score(y, l, zero_division=1)
+    return recall_score(y_pred=y,y_true=l, zero_division=1)
 
 if __name__ == '__main__':
     a = torch.randn(1, 1, 320,320)

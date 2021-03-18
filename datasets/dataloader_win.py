@@ -120,6 +120,7 @@ class TamperDataset(Dataset):
                 gt_dou_edge = self.__to_dou_edge(gt)
                 # 下面的relation_map还是01
                 relation_map = self.__gen_8_2_map(np.array(gt,dtype='uint8'))
+
         except Exception as e:
             print(e)
 
@@ -163,7 +164,6 @@ class TamperDataset(Dataset):
         elif self.stage_type == 'stage2':
             sample = {'tamper_image': img, 'gt_band': gt_band, 'gt_dou_edge': gt_dou_edge,'relation_map':relation_map,
                       'path': {'src': tamper_path, 'gt': gt_path}}
-
         return sample
 
     def __len__(self):
@@ -218,9 +218,8 @@ class TamperDataset(Dataset):
 
     def __to_dou_edge(self,dou_em):
         # 转化为无类别的GT 100 255 为边缘
-        dou_em = np.array(dou_em)
         dou_em = np.where(dou_em == 50, 0, dou_em)
-        dou_em = np.where(dou_em == 100, 255, dou_em)
+        dou_em = np.where(dou_em == 100, 1, dou_em)
         return dou_em
     def __gen_8_2_map(self, mask, mask_area=50, mask_edge=255, not_mask_edge=100):
         """
@@ -258,7 +257,8 @@ class TamperDataset(Dataset):
         mask_shape = mask_pad.shape
         # 生成8张结果图
         for i in range(8):
-            relation_8_map.append(np.ones((mask_shape[0], mask_shape[1], 2)))
+            temp = np.ones((mask_shape[0], mask_shape[1], 2))
+            relation_8_map.append(temp)
 
         for j in range(len(edge_loc[0])):
             row = edge_loc[0][j]
@@ -365,8 +365,6 @@ class MixData:
             self.data_root = '/hy-tmp/3月最新数据'
         elif device == 'wkl':
             self.data_root = 'D:\\chenhaoran\\data'
-        elif device == 'ai500':
-            self.data_root = '/hy-tmp/3月最新数据'
         # data_path_gather的逻辑是返回一个字典，该字典包含了需要使用的src 和 gt
         data_dict = MixData.__data_path_gather(self, train_mode=train_mode, using_data=using_data)
         # src
@@ -389,7 +387,7 @@ class MixData:
         for index1, item1 in enumerate(self.src_path_list):
             for index2, item2 in enumerate(os.listdir(item1)):
                 t_img_path = os.path.join(item1, item2)
-                # print(t_img_path)
+                print(t_img_path)
                 t_gt_path = MixData.__switch_case(self, t_img_path)
                 if t_gt_path != '':
                     train_list.append(t_img_path)
@@ -580,9 +578,9 @@ class MixData:
         try:
             if using_data['my_sp']:
                 if train_mode:
-                    path = os.path.join(self.data_root,'coco_sp/train_src')
+                    path = os.path.join(self.data_root,'coco_sp\\train_src')
                     src_path_list.append(path)
-                    self.sp_gt_path =os.path.join(self.data_root, 'coco_sp/train_gt')
+                    self.sp_gt_path =os.path.join(self.data_root, 'coco_sp\\train_gt')
                 else:
                     path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
                     src_path_list.append(path)
@@ -593,14 +591,14 @@ class MixData:
         try:
             if using_data['my_cm']:
                 if train_mode:
-                    path = os.path.join(self.data_root, 'coco_cm/train_src')
-                    # path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_src'
+                    path = os.path.join(self.data_root, 'coco_cm\\train_src')
+                    # path = '\\home\\liu\\chenhaoran\\Tamper_Data\\0222\\coco_cm_after_divide\\train_src'
                     src_path_list.append(path)
-                    self.cm_gt_path = os.path.join(self.data_root, 'coco_cm/train_gt')
+                    self.cm_gt_path = os.path.join(self.data_root, 'coco_cm\\train_gt')
                 else:
-                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\train_dataset_train_percent_0.80@8_26'
                     src_path_list.append(path)
-                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+                    self.cm_gt_path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\test_dataset_train_percent_0.80@8_26'
         except Exception as e:
             print(e)
         ###########################################
@@ -608,29 +606,29 @@ class MixData:
         try:
             if using_data['template_casia_casia']:
                 if train_mode:
-                    path = os.path.join(self.data_root,'casia_au_and_casia_template_after_divide/train_src')
+                    path = os.path.join(self.data_root,'casia_au_and_casia_template_after_divide\\train_src')
 
                     src_path_list.append(path)
-                    self.template_casia_casia_gt_path = os.path.join(self.data_root, 'casia_au_and_casia_template_after_divide/train_gt')
+                    self.template_casia_casia_gt_path = os.path.join(self.data_root, 'casia_au_and_casia_template_after_divide\\train_gt')
 
                 else:
 
-                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\train_dataset_train_percent_0.80@8_26'
                     src_path_list.append(path)
-                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+                    self.cm_gt_path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\test_dataset_train_percent_0.80@8_26'
         except Exception as e:
             print('template_casia_casia', 'error')
 
         try:
             if using_data['template_coco_casia']:
                 if train_mode:
-                    path = os.path.join(self.data_root,'coco_casia_template_after_divide/train_src')
+                    path = os.path.join(self.data_root,'coco_casia_template_after_divide\\train_src')
                     src_path_list.append(path)
-                    self.template_coco_casia_gt_path = os.path.join(self.data_root, 'coco_casia_template_after_divide/train_gt')
+                    self.template_coco_casia_gt_path = os.path.join(self.data_root, 'coco_casia_template_after_divide\\train_gt')
                 else:
-                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\train_dataset_train_percent_0.80@8_26'
                     src_path_list.append(path)
-                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+                    self.cm_gt_path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\test_dataset_train_percent_0.80@8_26'
 
         except Exception as e:
             print(e)
@@ -641,14 +639,14 @@ class MixData:
             if using_data['cod10k']:
                 if train_mode:
 
-                    path = os.path.join(self.data_root, 'COD10K/train_src')
+                    path = os.path.join(self.data_root, 'COD10K\\train_src')
                     src_path_list.append(path)
-                    self.COD10K_gt_path = os.path.join(self.data_root, 'COD10K/train_gt')
+                    self.COD10K_gt_path = os.path.join(self.data_root, 'COD10K\\train_gt')
 
                 else:
-                    path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
+                    path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\train_dataset_train_percent_0.80@8_26'
                     src_path_list.append(path)
-                    self.cm_gt_path = '/media/liu/File/8_26_Sp_dataset_after_divide/test_dataset_train_percent_0.80@8_26'
+                    self.cm_gt_path = '\\media\\liu\\File\\8_26_Sp_dataset_after_divide\\test_dataset_train_percent_0.80@8_26'
         except Exception as e:
             print(e)
         #############################################
@@ -661,9 +659,9 @@ class MixData:
                     src_path_list.append(path)
                     self.negative_gt_path = os.path.join(self.data_root, 'negative_gt')
                 else:
-                    path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                    path = '\\media\\liu\\File\\10月数据准备\\10月12日实验数据\\negative\\src'
                     src_path_list.append(path)
-                    self.negative_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+                    self.negative_gt_path = '\\media\\liu\\File\\10月数据准备\\10月12日实验数据\\negative\\gt'
         except Exception as e:
             print(e)
 
@@ -671,27 +669,27 @@ class MixData:
         try:
             if using_data['texture_sp']:
                 if train_mode:
-                    path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_src')
+                    path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide\\train_src')
                     src_path_list.append(path)
-                    self.texture_sp_gt_path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_gt')
+                    self.texture_sp_gt_path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide\\train_gt')
                 else:
-                    path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_src'
+                    path = '\\home\\liu\\chenhaoran\\Tamper_Data\\0222\\0108_texture_and_casia_template_divide\\test_src'
                     src_path_list.append(path)
-                    self.texture_sp_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_gt'
+                    self.texture_sp_gt_path = '\\home\\liu\\chenhaoran\\Tamper_Data\\0222\\0108_texture_and_casia_template_divide\\test_gt'
         except Exception as e:
             print(e)
 
         try:
             if using_data['texture_cm']:
                 if train_mode:
-                    path = os.path.join(self.data_root, 'periodic_texture/divide/train_src')
+                    path = os.path.join(self.data_root, 'periodic_texture\\divide\\train_src')
                     src_path_list.append(path)
                     self.texture_cm_gt_path = os.path.join(self.data_root,
-                                                           'periodic_texture/divide/train_gt')
+                                                           'periodic_texture\\divide\\train_gt')
                 else:
-                    path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
+                    path = '\\media\\liu\\File\\10月数据准备\\10月12日实验数据\\negative\\src'
                     src_path_list.append(path)
-                    self.texture_cm_gt_path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/gt'
+                    self.texture_cm_gt_path = '\\media\\liu\\File\\10月数据准备\\10月12日实验数据\\negative\\gt'
         except Exception as e:
             print(e)
 
@@ -700,9 +698,9 @@ class MixData:
                 if train_mode:
                     pass
                 else:
-                    path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/src'
+                    path = '\\home\\liu\\chenhaoran\\Tamper_Data\\0222\\casia\\src'
                     src_path_list.append(path)
-                    self.casia_gt_path = '/home/liu/chenhaoran/Tamper_Data/0222/casia/gt'
+                    self.casia_gt_path = '\\home\\liu\\chenhaoran\\Tamper_Data\\0222\\casia\\gt'
 
         except Exception as e:
             print(e)
@@ -714,16 +712,16 @@ class MixData:
                 if train_mode:
                     pass
                 else:
-                    path = os.path.join(self.data_root, 'public_dataset/coverage/src')
+                    path = os.path.join(self.data_root, 'public_dataset\\coverage\\src')
                     src_path_list.append(path)
-                    self.coverage_gt_path = os.path.join(self.data_root, 'public_dataset/coverage/gt')
+                    self.coverage_gt_path = os.path.join(self.data_root, 'public_dataset\\coverage\\gt')
 
         except Exception as e:
             print(e)
 
         try:
             if using_data['columb']:
-                path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
+                path = '\\media\\liu\\File/Sp_320_dataset/tamper_result_320'
                 src_path_list.append(path)
         except Exception as e:
             print(e)
@@ -819,7 +817,7 @@ if __name__ == '__main__':
                                               'negative_casia': False,
                                               'texture_sp': False,
                                               'texture_cm': False,
-                                              }, train_val_test_mode='test',stage_type='stage1')
+                                              }, train_val_test_mode='test',stage_type='stage1',device='libiao')
     dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=1, num_workers=1)
     start = time.time()
     try:
@@ -832,7 +830,6 @@ if __name__ == '__main__':
             # check_4dim_img_pair(item['tamper_image'], item['gt_band'])
             # if idx == 3000:
             #     break
-            time.sleep(1)
 
             if item['tamper_image'].shape[2:] !=item['gt_band'].shape[2:]:
                 # print('++++++')

@@ -35,20 +35,20 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0310_stage1_后缀为0306的模型,fine第一阶段'
+name = '0310_stage1_后缀为0306的模型factor1第一阶段_wkl'
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=12, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=4, type=int, metavar='BT',
                     help='batch size')
 parser.add_argument('--model_save_dir', type=str, help='model_save_dir',
                     default='../save_model/'+name)
 # =============== optimizer
-parser.add_argument('--lr', '--learning_rate', default=1e-3, type=float,
+parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=3, type=int,
+parser.add_argument('--stepsize', default=4, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -64,8 +64,7 @@ parser.add_argument('--print_freq', '-p', default=10, type=int,
 parser.add_argument('--gpu', default='0', type=str,
                     help='GPU ID')
 #####################resume##########################
-parser.add_argument('--resume', default='/home/liu/chenhaoran/Mymodel/save_model/0310_stage1_后缀为0306的模型,fine第一阶段'
-                                        '/0310_stage1_后缀为0306的模型,fine第一阶段_checkpoint10-stage1-0.149544-f10.791111-precision0.951842-acc0.990172-recall0.680869.pth', type=str, metavar='PATH',
+parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
 parser.add_argument('--mid_result_index', type=list, help='mid_result_index', default=[0])
@@ -121,21 +120,8 @@ def main():
                   'negative': True,
                   'negative_casia': False,
                   'texture_sp': True,
-                  'texture_cm': True,
+                  'texture_cm': False,
                   }
-    # using_data = {'my_sp': False,
-    #               'my_cm': False,
-    #               'template_casia_casia': False,
-    #               'template_coco_casia': False,
-    #               'cod10k': True,
-    #               'casia': False,
-    #               'coverage': False,
-    #               'columb': False,
-    #               'negative': False,
-    #               'negative_casia': False,
-    #               'texture_sp': False,
-    #               'texture_cm': False,
-    #               }
     using_data_test = {'my_sp': False,
                        'my_cm': False,
                        'template_casia_casia': False,
@@ -148,9 +134,9 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train')
-    valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val')
-    testData = TamperDataset(stage_type='stage1', using_data=using_data_test, train_val_test_mode='test')
+    trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train',device='wkl')
+    valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val',device='wkl')
+    testData = TamperDataset(stage_type='stage1', using_data=using_data_test, train_val_test_mode='test',device='wkl')
 
     # 3 specific dataloader
     trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=4, shuffle=True,
@@ -159,7 +145,7 @@ def main():
 
     testDataLoader = torch.utils.data.DataLoader(testData, batch_size=1, num_workers=1)
     # model
-    model = Net()
+    model = Net(bilinear=True)
     if torch.cuda.is_available():
         model.cuda()
     else:
@@ -179,8 +165,7 @@ def main():
             print("=> loading checkpoint '{}'".format(args.resume))
             checkpoint = torch.load(args.resume)
             model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            args.start_epoch = checkpoint['epoch']+1
+            # optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}'".format(args.resume))
             # optimizer.load_state_dict(checkpoint['optimizer'])
 
@@ -199,7 +184,7 @@ def main():
     for epoch in range(args.start_epoch, args.maxepoch):
         train_avg = train(model=model, optimizer=optimizer, dataParser=trainDataLoader, epoch=epoch)
         val_avg = val(model=model, dataParser=valDataLoader, epoch=epoch)
-        test(model=model, dataParser=testDataLoader, epoch=epoch)
+        test_avg = test(model=model, dataParser=testDataLoader, epoch=epoch)
 
         """"""""""""""""""""""""""""""
         "          写入图            "
