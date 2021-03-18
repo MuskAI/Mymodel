@@ -427,8 +427,7 @@ def val(model1, dataParser, epoch):
                    '第一阶段:precision_score: {precision.val:f} (avg:{precision.avg:f}) '.format(
                        precision=precision_value_stage1) + \
                    '第一阶段:acc_score {acc.val:f} (avg:{acc.avg:f})'.format(acc=acc_value_stage1) + \
-                   '第一阶段:recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value_stage1) + \
-
+                   '第一阶段:recall_score {recall.val:f} (avg:{recall.avg:f})'.format(recall=recall_value_stage1)
             print(info)
 
         if batch_index >= val_epoch:
