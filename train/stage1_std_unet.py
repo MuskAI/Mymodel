@@ -11,7 +11,6 @@ from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cr
     map8_loss_ce, my_recall_score, cross_entropy_loss, wce_dice_huber_loss
 from datasets.dataloader import TamperDataset
 from model.unet_two_stage_model_0306 import UNetStage1 as Net1
-from model.unet_two_stage_model_0306 import UNetStage2 as Net2
 from PIL import Image
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
@@ -30,10 +29,10 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0318_stage1后缀为0306的模型，训练双边缘第一阶段'
+name = '0319_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=12, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
@@ -48,7 +47,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=3, type=int,
+parser.add_argument('--stepsize', default=5, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -126,6 +125,7 @@ def main():
                   'negative_casia': False,
                   }
 
+
     using_data_test = {'my_sp': False,
                        'my_cm': False,
                        'template_casia_casia': False,
@@ -138,14 +138,14 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train', device='ai500')
-    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val', device='ai500')
-    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test', device='ai500')
+    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train')
+    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val')
+    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test')
 
     # 3 specific dataloader
-    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=8, shuffle=True,
+    trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, shuffle=True,num_workers=4,
                                                   pin_memory=False)
-    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size, num_workers=4, shuffle=True)
+    valDataLoader = torch.utils.data.DataLoader(valData, batch_size=args.batch_size,  shuffle=True,num_workers=4)
 
     testDataLoader = torch.utils.data.DataLoader(testData, batch_size=1, num_workers=0)
     # model
@@ -471,9 +471,8 @@ def test(model1,dataParser, epoch):
             ##########################################
             # deal with one stage issue
             # 建立loss
-            z = torch.cat((one_stage_outputs[0],labels_dou_edge), 0)
-            writer.add_image('one&two_stage_image_batch:%d' % (batch_index),
-                             make_grid(z, nrow=2), global_step=epoch)
+            writer.add_images('one&two_stage_image_batch:%d' % (batch_index),
+                             one_stage_outputs[0], global_step=epoch)
 
 
 if __name__ == '__main__':

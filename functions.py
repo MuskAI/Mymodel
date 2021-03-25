@@ -17,7 +17,11 @@ def wce_dice_huber_loss(pred, gt):
     loss3 = smooth_l1_loss(pred, gt)
     return 0.6 * loss1 + 0.15 * loss2 + 0.15 * loss3
 
+def wce_dice_huber_loss_stage2(pred1,pred2,gt):
 
+    loss1 = cross_entropy_loss_stage2(pred2, gt, mask=pred1)
+    # loss2 = DiceLoss()(pred2, gt)
+    return loss1
 
 class DiceLoss(nn.Module):
     def __init__(self):
@@ -77,40 +81,40 @@ class BinaryDiceLoss(nn.Module):
         else:
             raise Exception('Unexpected reduction {}'.format(self.reduction))
 
-
-class DiceLoss(nn.Module):
-    """Dice loss, need one hot encode input
-    Args:
-        weight: An array of shape [num_classes,]
-        ignore_index: class index to ignore
-        predict: A tensor of shape [N, C, *]
-        target: A tensor of same shape with predict
-        other args pass to BinaryDiceLoss
-    Return:
-        same as BinaryDiceLoss
-    """
-    def __init__(self, weight=None, ignore_index=None, **kwargs):
-        super(DiceLoss, self).__init__()
-        self.kwargs = kwargs
-        self.weight = weight
-        self.ignore_index = ignore_index
-
-    def forward(self, predict, target):
-        assert predict.shape == target.shape, 'predict & target shape do not match'
-        dice = BinaryDiceLoss(**self.kwargs)
-        total_loss = 0
-        predict = F.softmax(predict, dim=1)
-
-        for i in range(target.shape[1]):
-            if i != self.ignore_index:
-                dice_loss = dice(predict[:, i], target[:, i])
-                if self.weight is not None:
-                    assert self.weight.shape[0] == target.shape[1], \
-                        'Expect weight shape [{}], get[{}]'.format(target.shape[1], self.weight.shape[0])
-                    dice_loss *= self.weights[i]
-                total_loss += dice_loss
-
-        return total_loss/target.shape[1]
+#
+# class DiceLoss(nn.Module):
+#     """Dice loss, need one hot encode input
+#     Args:
+#         weight: An array of shape [num_classes,]
+#         ignore_index: class index to ignore
+#         predict: A tensor of shape [N, C, *]
+#         target: A tensor of same shape with predict
+#         other args pass to BinaryDiceLoss
+#     Return:
+#         same as BinaryDiceLoss
+#     """
+#     def __init__(self, weight=None, ignore_index=None, **kwargs):
+#         super(DiceLoss, self).__init__()
+#         self.kwargs = kwargs
+#         self.weight = weight
+#         self.ignore_index = ignore_index
+#
+#     def forward(self, predict, target):
+#         assert predict.shape == target.shape, 'predict & target shape do not match'
+#         dice = BinaryDiceLoss(**self.kwargs)
+#         total_loss = 0
+#         predict = F.softmax(predict, dim=1)
+#
+#         for i in range(target.shape[1]):
+#             if i != self.ignore_index:
+#                 dice_loss = dice(predict[:, i], target[:, i])
+#                 if self.weight is not None:
+#                     assert self.weight.shape[0] == target.shape[1], \
+#                         'Expect weight shape [{}], get[{}]'.format(target.shape[1], self.weight.shape[0])
+#                     dice_loss *= self.weights[i]
+#                 total_loss += dice_loss
+#
+#         return total_loss/target.shape[1]
 
 
 def sigmoid_cross_entropy_loss(prediction, label):
@@ -152,11 +156,18 @@ class FocalLoss(nn.Module):
 def cross_entropy_loss(prediction, label):
     label = label.long()
     mask = (label != 0).float()
+
     num_positive = torch.sum(mask).float()
     num_negative = mask.numel() - num_positive
     # print (num_positive, num_negative)
     mask[mask != 0] = num_negative / (num_positive + num_negative) # 0.995
     mask[mask == 0] = num_positive / (num_positive + num_negative) # 0.005
+    cost = torch.nn.functional.binary_cross_entropy(
+            prediction.float(), label.float(), weight=mask)
+    return cost
+def cross_entropy_loss_stage2(prediction, label, mask):
+    label = label.long()
+    mask = (mask >= 0.2).float()
     cost = torch.nn.functional.binary_cross_entropy(
             prediction.float(), label.float(), weight=mask)
     return cost

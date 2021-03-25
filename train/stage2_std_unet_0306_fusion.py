@@ -8,7 +8,7 @@ sys.path.append('../utils')
 import argparse
 import time, datetime
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
-    map8_loss_ce, my_recall_score, cross_entropy_loss, wce_dice_huber_loss
+    map8_loss_ce, my_recall_score, cross_entropy_loss, wce_dice_huber_loss,wce_dice_huber_loss_stage2
 from datasets.dataloader import TamperDataset
 from model.unet_two_stage_model_0306 import UNetStage1 as Net1
 from model.unet_two_stage_model_0306 import UNetStage2 as Net2
@@ -30,7 +30,7 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0314_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段_grayproblem'
+name = '0322_stage1&2_后缀为0306的模型,只监督条带区域'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
@@ -138,9 +138,9 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train')
-    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val')
-    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test')
+    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train',device='413')
+    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val',device='413')
+    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test',device='413')
 
     # 3 specific dataloader
     trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=8, shuffle=True,
@@ -164,7 +164,7 @@ def main():
     model2.apply(weights_init)
 
     # 模型可持续化
-    optimizer1 = optim.Adam(model1.parameters(), lr=1e-6, betas=(0.9, 0.999), eps=1e-8)
+    optimizer1 = optim.Adam(model1.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-8)
     optimizer2 = optim.Adam(model2.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
 
     # 加载模型
@@ -315,6 +315,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
         labels_dou_edge = input_data['gt_dou_edge'].cuda()
         relation_map = input_data['relation_map']
 
+
         if torch.cuda.is_available():
             loss_8t = torch.zeros(()).cuda()
         else:
@@ -345,10 +346,10 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
             ##########################################
             # deal with one stage issue
             # 建立loss
-            loss_stage_1 = wce_dice_huber_loss(one_stage_outputas[0], labels_band)
+            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
-            loss_stage_2 = wce_dice_huber_loss(two_stage_outputs[0], labels_dou_edge)
+            loss_stage_2 = wce_dice_huber_loss_stage2(one_stage_outputs[0],two_stage_outputs[0], labels_dou_edge)
 
             for c_index, c in enumerate(two_stage_outputs[1:9]):
                 one_loss_t = map8_loss_ce(c, relation_map[c_index].cuda())

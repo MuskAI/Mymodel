@@ -23,7 +23,6 @@ import matplotlib.pyplot as plt
 from PIL import ImageFilter
 import random
 from rich.progress import track
-import rich
 
 
 class TamperDataset(Dataset):
@@ -97,12 +96,12 @@ class TamperDataset(Dataset):
         # check the src dim
         if mode=='test':
             if len(img.split()) != 3:
-                rich.print(tamper_path, 'error')
-                rich.print(gt_path)
+                print(tamper_path, 'error')
+                print(gt_path)
         else:
             if len(img.split()) != 3 or img.size !=(320,320) or gt.size !=(320,320):
-                rich.print(tamper_path, 'error')
-                rich.print(gt_path)
+                print(tamper_path, 'error')
+                print(gt_path)
         ##############################################
 
         # check the gt dim
@@ -365,6 +364,10 @@ class MixData:
             self.data_root = '/hy-tmp/3月最新数据'
         elif device == 'wkl':
             self.data_root = 'D:\\chenhaoran\\data'
+        elif device == 'ai500':
+            self.data_root = '/home/dc2-user/chenhaoran/3月份最新数据'
+        elif device == '413blur':
+            self.data_root = '/home/liu/chenhaoran/Tamper_Data/edge_blur'
         # data_path_gather的逻辑是返回一个字典，该字典包含了需要使用的src 和 gt
         data_dict = MixData.__data_path_gather(self, train_mode=train_mode, using_data=using_data)
         # src
@@ -435,8 +438,8 @@ class MixData:
         # 3. negative data
         # 4. CASIA data
 
-        sp_type = ['Sp']
-        cm_type = ['Default', 'poisson']
+        sp_type = ['coco_sp']
+        cm_type = ['coco_cm']
         negative_type = ['negative']
         CASIA_type = ['Tp']
         COVERAGE_type = ['coverage']
@@ -449,18 +452,18 @@ class MixData:
         type = []
         name = path.split('/')[-1]
         # name = path.split('\\')[-1]
+
         for sp_flag in sp_type:
-            if sp_flag in name[:2] and 'texture' not in path:
+            if sp_flag in path:
                 type.append('sp')
                 break
-
         for cm_flag in cm_type:
-            if cm_flag in name[:7] and 'texture' not in path:
+            if cm_flag in path:
                 type.append('cm')
                 break
 
         for negative_flag in negative_type:
-            if negative_flag in name:
+            if negative_flag in path:
                 type.append('negative')
                 break
 
@@ -503,12 +506,12 @@ class MixData:
             return ''
 
         if type[0] == 'sp':
-            gt_path = name.replace('Default', 'Gt').replace('.jpg', '.bmp').replace('.png', '.bmp').replace('poisson',
+            gt_path = name.replace('Default', '').replace('Sp', name.split('.')[-1]).replace('.jpg', '.bmp').replace('.png', '.bmp').replace('poisson',
                                                                                                             'Gt')
             gt_path = os.path.join(self.sp_gt_path, gt_path)
             pass
         elif type[0] == 'cm':
-            gt_path = name.replace('Default', 'Gt').replace('.jpg', '.bmp').replace('.png', '.bmp').replace('poisson',
+            gt_path = name.replace('Default', name.split('.')[-1]+'_').replace('.jpg', '.bmp').replace('.png', '.bmp').replace('poisson',
                                                                                                             'Gt')
             gt_path = os.path.join(self.cm_gt_path, gt_path)
             pass
@@ -529,8 +532,7 @@ class MixData:
             gt_path = os.path.join(self.template_coco_casia_gt_path, gt_path)
 
         elif type[0] == 'COD10K':
-            gt_path = name.split('.')[0] + '.bmp'
-            gt_path = gt_path.replace('tamper', 'Gt')
+            gt_path = name.split('.')[-1]+name.replace('COD10K','').replace('tamper', '').split('.')[0] + '.bmp'
             gt_path = os.path.join(self.COD10K_gt_path, gt_path)
 
         elif type[0] == 'COVERAGE':
@@ -538,7 +540,7 @@ class MixData:
             gt_path = name.replace('t','forged')
             gt_path = os.path.join(self.coverage_gt_path, gt_path)
         elif type[0] == 'TEXTURE_CM':
-            gt_path = name.split('.')[0] + '.bmp'
+            gt_path = name.split('.')[-1] + '_'+name.split('.')[0] + '.bmp'
             gt_path = os.path.join(self.texture_cm_gt_path, gt_path)
         elif type[0] == 'TEXTURE_SP':
             gt_path = name.split('.')[0] + '.bmp'
@@ -578,9 +580,9 @@ class MixData:
         try:
             if using_data['my_sp']:
                 if train_mode:
-                    path = os.path.join(self.data_root,'coco_sp/train_src')
+                    path = os.path.join(self.data_root,'coco_sp/train_src_blur')
                     src_path_list.append(path)
-                    self.sp_gt_path =os.path.join(self.data_root, 'coco_sp/train_gt')
+                    self.sp_gt_path =os.path.join(self.data_root, 'coco_sp/train_gt_blur')
                 else:
                     path = '/media/liu/File/Sp_320_dataset/tamper_result_320'
                     src_path_list.append(path)
@@ -591,10 +593,10 @@ class MixData:
         try:
             if using_data['my_cm']:
                 if train_mode:
-                    path = os.path.join(self.data_root, 'coco_cm/train_src')
-                    # path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_src'
+                    path = os.path.join(self.data_root, 'coco_cm/train_src_blur')
+                    # path = '/home/liu/chenhaoran/Tamper_Data/0222/coco_cm_after_divide/train_src_blur'
                     src_path_list.append(path)
-                    self.cm_gt_path = os.path.join(self.data_root, 'coco_cm/train_gt')
+                    self.cm_gt_path = os.path.join(self.data_root, 'coco_cm/train_gt_blur')
                 else:
                     path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
                     src_path_list.append(path)
@@ -606,10 +608,10 @@ class MixData:
         try:
             if using_data['template_casia_casia']:
                 if train_mode:
-                    path = os.path.join(self.data_root,'casia_au_and_casia_template_after_divide/train_src')
+                    path = os.path.join(self.data_root,'casia_au_and_casia_template_after_divide/train_src_blur')
 
                     src_path_list.append(path)
-                    self.template_casia_casia_gt_path = os.path.join(self.data_root, 'casia_au_and_casia_template_after_divide/train_gt')
+                    self.template_casia_casia_gt_path = os.path.join(self.data_root, 'casia_au_and_casia_template_after_divide/train_gt_blur')
 
                 else:
 
@@ -622,9 +624,9 @@ class MixData:
         try:
             if using_data['template_coco_casia']:
                 if train_mode:
-                    path = os.path.join(self.data_root,'coco_casia_template_after_divide/train_src')
+                    path = os.path.join(self.data_root,'coco_casia_template_after_divide/train_src_blur')
                     src_path_list.append(path)
-                    self.template_coco_casia_gt_path = os.path.join(self.data_root, 'coco_casia_template_after_divide/train_gt')
+                    self.template_coco_casia_gt_path = os.path.join(self.data_root, 'coco_casia_template_after_divide/train_gt_blur')
                 else:
                     path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
                     src_path_list.append(path)
@@ -639,9 +641,9 @@ class MixData:
             if using_data['cod10k']:
                 if train_mode:
 
-                    path = os.path.join(self.data_root, 'COD10K/train_src')
+                    path = os.path.join(self.data_root, 'COD10K/train_src_blur')
                     src_path_list.append(path)
-                    self.COD10K_gt_path = os.path.join(self.data_root, 'COD10K/train_gt')
+                    self.COD10K_gt_path = os.path.join(self.data_root, 'COD10K/train_gt_blur')
 
                 else:
                     path = '/media/liu/File/8_26_Sp_dataset_after_divide/train_dataset_train_percent_0.80@8_26'
@@ -669,9 +671,9 @@ class MixData:
         try:
             if using_data['texture_sp']:
                 if train_mode:
-                    path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_src')
+                    path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_src_blur')
                     src_path_list.append(path)
-                    self.texture_sp_gt_path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_gt')
+                    self.texture_sp_gt_path = os.path.join(self.data_root, '0108_texture_and_casia_template_divide/train_gt_blur')
                 else:
                     path = '/home/liu/chenhaoran/Tamper_Data/0222/0108_texture_and_casia_template_divide/test_src'
                     src_path_list.append(path)
@@ -682,10 +684,10 @@ class MixData:
         try:
             if using_data['texture_cm']:
                 if train_mode:
-                    path = os.path.join(self.data_root, 'periodic_texture/divide/train_src')
+                    path = os.path.join(self.data_root, 'periodic_texture/divide/train_src_blur')
                     src_path_list.append(path)
                     self.texture_cm_gt_path = os.path.join(self.data_root,
-                                                           'periodic_texture/divide/train_gt')
+                                                           'periodic_texture/divide/train_gt_blur')
                 else:
                     path = '/media/liu/File/10月数据准备/10月12日实验数据/negative/src'
                     src_path_list.append(path)
@@ -712,9 +714,9 @@ class MixData:
                 if train_mode:
                     pass
                 else:
-                    path = os.path.join(self.data_root, 'public_dataset/coverage/src')
+                    path = os.path.join('/home/liu/chenhaoran/Tamper_Data/3月最新数据', 'public_dataset/coverage/src')
                     src_path_list.append(path)
-                    self.coverage_gt_path = os.path.join(self.data_root, 'public_dataset/coverage/gt')
+                    self.coverage_gt_path = os.path.join('/home/liu/chenhaoran/Tamper_Data/3月最新数据', 'public_dataset/coverage/gt')
 
         except Exception as e:
             print(e)
@@ -760,33 +762,6 @@ class AddGlobalBlur(object):
             return img
 
 
-class AddEdgeBlur(object):
-    """
-    增加全局模糊
-    """
-
-    def __init__(self, gt_img=None, kernel_size=1, p=1):
-        self.gt = gt_img
-        self.kernel_size = kernel_size
-        self.p = p
-        kernel_size = random.randint(0, 15) / 10
-
-    def __call__(self, img):
-        """
-        Args:
-            img (PIL Image): PIL Image
-        Returns:
-            PIL Image: PIL image.
-        """
-        if random.random() < self.p:  # 概率判断
-            img_ = np.array(img).copy()
-            h, w, c = img_.shape
-            img_ = Image.fromarray(img_)
-            img_ = img_.filter(ImageFilter.GaussianBlur(radius=self.kernel_size))
-            img_ = np.array(img_)
-            return Image.fromarray(img_.astype('uint8')).convert('RGB')
-        else:
-            return img
 
 
 if __name__ == '__main__':
@@ -817,9 +792,8 @@ if __name__ == '__main__':
                                               'negative_casia': False,
                                               'texture_sp': False,
                                               'texture_cm': False,
-                                              }, train_val_test_mode='test',stage_type='stage1')
-
-    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=1, num_workers=1)
+                                              }, train_val_test_mode='test',stage_type='stage1',device='413blur')
+    dataloader = torch.utils.data.DataLoader(mytestdataset, batch_size=1, num_workers=8)
     start = time.time()
     try:
         for idx, item in enumerate(track(dataloader)):
@@ -831,7 +805,7 @@ if __name__ == '__main__':
             # check_4dim_img_pair(item['tamper_image'], item['gt_band'])
             # if idx == 3000:
             #     break
-            time.sleep(1)
+
 
             if item['tamper_image'].shape[2:] !=item['gt_band'].shape[2:]:
                 # print('++++++')

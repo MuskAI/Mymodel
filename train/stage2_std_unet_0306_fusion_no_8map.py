@@ -8,7 +8,7 @@ sys.path.append('../utils')
 import argparse
 import time, datetime
 from functions import my_f1_score, my_acc_score, my_precision_score, weighted_cross_entropy_loss, wce_huber_loss, \
-    map8_loss_ce, my_recall_score, cross_entropy_loss, wce_dice_huber_loss
+    map8_loss_ce, my_recall_score, cross_entropy_loss, wce_dice_huber_loss,wce_dice_huber_loss_stage2
 from datasets.dataloader import TamperDataset
 from model.unet_two_stage_model_0306 import UNetStage1 as Net1
 from model.unet_two_stage_model_0306 import UNetStage2 as Net2
@@ -24,13 +24,13 @@ from os.path import join, split, isdir, isfile, splitext, split, abspath, dirnam
 Created by HaoRan
 time: 2021/01/29
 description:
-1. 单独训练stage 2
+1. 单独训练第二阶段，之监督条带区域内的像素
 """
 
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0314_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段_grayproblem'
+name = '0323_stage1&2_后缀为0306的模型,只监督条带区域,无8张图约束,无diceloss,threshold02'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
@@ -40,7 +40,7 @@ parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
 parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--resume', default=[
-    '/home/liu/chenhaoran/Mymodel/save_model/0311_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段/stage1_0311_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段_checkpoint9-two_stage-0.125575-f10.804937-precision0.942732-acc0.989484-recall0.711529.pth',
+    '/home/liu/chenhaoran/Mymodel/save_model/0323_stage1&2_后缀为0306的模型,只监督条带区域,无8张图约束/stage1_0323_stage1&2_后缀为0306的模型,只监督条带区域,无8张图约束_checkpoint6-two_stage-0.047892-f10.890272-precision0.923245-acc0.993727-recall0.864488.pth',
     ''], type=list, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
@@ -115,14 +115,14 @@ def main():
     using_data = {'my_sp': True,
                   'my_cm': True,
                   'template_casia_casia': True,
-                  'template_coco_casia': False,
+                  'template_coco_casia': True,
                   'cod10k': True,
                   'casia': False,
                   'copy_move': False,
                   'texture_sp': True,
                   'texture_cm': True,
                   'columb': False,
-                  'negative': False,
+                  'negative': True,
                   'negative_casia': False,
                   }
 
@@ -138,9 +138,9 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train')
-    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val')
-    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test')
+    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train',device='413')
+    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val',device='413')
+    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test',device='413')
 
     # 3 specific dataloader
     trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, num_workers=8, shuffle=True,
@@ -164,7 +164,7 @@ def main():
     model2.apply(weights_init)
 
     # 模型可持续化
-    optimizer1 = optim.Adam(model1.parameters(), lr=1e-6, betas=(0.9, 0.999), eps=1e-8)
+    optimizer1 = optim.Adam(model1.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-8)
     optimizer2 = optim.Adam(model2.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
 
     # 加载模型
@@ -222,29 +222,29 @@ def main():
                                                              'val': val_avg['loss_avg'],
                                                              },
                                global_step=epoch)
-            writer.add_scalars('val_avg_f1_recall__precision_acc', {'precision': val_avg['precision_avg_stage2'],
+            writer.add_scalars('val_avg_f1_recall_precision_acc', {'precision': val_avg['precision_avg_stage2'],
                                                                     'acc': val_avg['accuracy_avg_stage2'],
                                                                     'f1': val_avg['f1_avg_stage2'],
                                                                     'recall': val_avg['recall_avg_stage2'],
                                                                     }, global_step=epoch)
-
-            writer.add_scalars('tr_avg_map8_loss_per_epoch', {'map1': train_avg['map8_loss'][0],
-                                                              'map2': train_avg['map8_loss'][1],
-                                                              'map3': train_avg['map8_loss'][2],
-                                                              'map4': train_avg['map8_loss'][3],
-                                                              'map5': train_avg['map8_loss'][4],
-                                                              'map6': train_avg['map8_loss'][5],
-                                                              'map7': train_avg['map8_loss'][6],
-                                                              'map8': train_avg['map8_loss'][7]}, global_step=epoch)
-            writer.add_scalars('val_avg_map8_loss_per_epoch', {'map1': train_avg['map8_loss'][0],
-                                                               'map2': val_avg['map8_loss'][1],
-                                                               'map3': val_avg['map8_loss'][2],
-                                                               'map4': val_avg['map8_loss'][3],
-                                                               'map5': val_avg['map8_loss'][4],
-                                                               'map6': val_avg['map8_loss'][5],
-                                                               'map7': val_avg['map8_loss'][6],
-                                                               'map8': val_avg['map8_loss'][7]}, global_step=epoch)
-
+            #
+            # writer.add_scalars('tr_avg_map8_loss_per_epoch', {'map1': train_avg['map8_loss'][0],
+            #                                                   'map2': train_avg['map8_loss'][1],
+            #                                                   'map3': train_avg['map8_loss'][2],
+            #                                                   'map4': train_avg['map8_loss'][3],
+            #                                                   'map5': train_avg['map8_loss'][4],
+            #                                                   'map6': train_avg['map8_loss'][5],
+            #                                                   'map7': train_avg['map8_loss'][6],
+            #                                                   'map8': train_avg['map8_loss'][7]}, global_step=epoch)
+            # writer.add_scalars('val_avg_map8_loss_per_epoch', {'map1': train_avg['map8_loss'][0],
+            #                                                    'map2': val_avg['map8_loss'][1],
+            #                                                    'map3': val_avg['map8_loss'][2],
+            #                                                    'map4': val_avg['map8_loss'][3],
+            #                                                    'map5': val_avg['map8_loss'][4],
+            #                                                    'map6': val_avg['map8_loss'][5],
+            #                                                    'map7': val_avg['map8_loss'][6],
+            #                                                    'map8': val_avg['map8_loss'][7]}, global_step=epoch)
+            #
 
         except Exception as e:
             print(e)
@@ -315,6 +315,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
         labels_dou_edge = input_data['gt_dou_edge'].cuda()
         relation_map = input_data['relation_map']
 
+
         if torch.cuda.is_available():
             loss_8t = torch.zeros(()).cuda()
         else:
@@ -345,20 +346,20 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
             ##########################################
             # deal with one stage issue
             # 建立loss
-            loss_stage_1 = wce_dice_huber_loss(one_stage_outputas[0], labels_band)
+            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
-            loss_stage_2 = wce_dice_huber_loss(two_stage_outputs[0], labels_dou_edge)
+            loss_stage_2 = wce_dice_huber_loss_stage2(one_stage_outputs[0],two_stage_outputs[0], labels_dou_edge)
 
-            for c_index, c in enumerate(two_stage_outputs[1:9]):
-                one_loss_t = map8_loss_ce(c, relation_map[c_index].cuda())
-                loss_8t += one_loss_t
-                # print(one_loss_t)
-                map8_loss_value[c_index].update(one_loss_t.item())
+            # for c_index, c in enumerate(two_stage_outputs[1:9]):
+            #     one_loss_t = map8_loss_ce(c, relation_map[c_index].cuda())
+            #     loss_8t += one_loss_t
+            #     # print(one_loss_t)
+            #     map8_loss_value[c_index].update(one_loss_t.item())
 
             # print(loss_stage_2)
             # print(map8_loss_value)
-            loss = (loss_stage_2 * 12 + loss_8t) / 20
+            loss = loss_stage_2
             #######################################
             # 总的LOSS
             # print(type(loss_stage_2.item()))
@@ -390,7 +391,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
             break
 
     return {'loss_avg': losses.avg,
-            'map8_loss': [map8_loss.avg for map8_loss in map8_loss_value],
+            # 'map8_loss': [map8_loss.avg for map8_loss in map8_loss_value],
             }
 
 
@@ -455,15 +456,9 @@ def val(model1, model2, dataParser, epoch):
             loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
-            loss_stage_2 = wce_dice_huber_loss(two_stage_outputs[0], labels_dou_edge) * 12
+            loss_stage_2 = wce_dice_huber_loss_stage2(one_stage_outputs[0],two_stage_outputs[0], labels_dou_edge)
 
-            for c_index, c in enumerate(two_stage_outputs[1:9]):
-                one_loss_t = map8_loss_ce(c, relation_map[c_index].cuda())
-                loss_8t += one_loss_t
-                map8_loss_value[c_index].update(one_loss_t.item())
-
-            loss_stage_2 += loss_8t
-            loss = loss_stage_2 / 20
+            loss = loss_stage_2
 
             #######################################
             # 总的LOSS
@@ -547,7 +542,7 @@ def val(model1, model2, dataParser, epoch):
             'precision_avg_stage2': precision_value_stage2.avg,
             'accuracy_avg_stage2': acc_value_stage2.avg,
             'recall_avg_stage2': recall_value_stage2.avg,
-            'map8_loss': [map8_loss.avg for map8_loss in map8_loss_value],
+            # 'map8_loss': [map8_loss.avg for map8_loss in map8_loss_value],
             }
 
 
