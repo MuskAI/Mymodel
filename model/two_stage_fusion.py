@@ -1,6 +1,6 @@
 """
 @author:haoran
-time:322
+time:0329
 
 """
 import torch
@@ -14,3 +14,5 @@ class TwoStageFusion(nn.Module):
     def __init__(self):
         super().__init__()
     def forward(self,s1,s2):
+
+

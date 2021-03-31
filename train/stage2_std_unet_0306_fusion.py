@@ -30,7 +30,7 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0322_stage1&2_后缀为0306的模型,只监督条带区域'
+name = '0329_stage1&2_后缀为0306的模型,没有预训练'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
@@ -40,7 +40,7 @@ parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
 parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--resume', default=[
-    '/home/liu/chenhaoran/Mymodel/save_model/0311_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段/stage1_0311_stage1&2_后缀为0306的模型,先训练好敌意阶段再训练第二阶段_checkpoint9-two_stage-0.125575-f10.804937-precision0.942732-acc0.989484-recall0.711529.pth',
+    '',
     ''], type=list, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
@@ -122,7 +122,7 @@ def main():
                   'texture_sp': True,
                   'texture_cm': True,
                   'columb': False,
-                  'negative': False,
+                  'negative': True,
                   'negative_casia': False,
                   }
 
@@ -164,7 +164,7 @@ def main():
     model2.apply(weights_init)
 
     # 模型可持续化
-    optimizer1 = optim.Adam(model1.parameters(), lr=1e-4, betas=(0.9, 0.999), eps=1e-8)
+    optimizer1 = optim.Adam(model1.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
     optimizer2 = optim.Adam(model2.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
 
     # 加载模型
@@ -359,7 +359,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
 
             # print(loss_stage_2)
             # print(map8_loss_value)
-            loss = (loss_stage_2 * 12 + loss_8t) / 20
+            loss = (loss_stage_2 * 12 + loss_8t) / 20 + loss_stage_1
             #######################################
             # 总的LOSS
             # print(type(loss_stage_2.item()))

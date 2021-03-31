@@ -130,7 +130,7 @@ class TamperDataset(Dataset):
             else:
 
                 img = transforms.Compose([
-                    # AddGlobalBlur(p=0.5),
+                    AddGlobalBlur(p=0.5),
                     transforms.ToTensor(),
                     transforms.Normalize((0.47, 0.43, 0.39), (0.27, 0.26, 0.27)),
                 ])(img)

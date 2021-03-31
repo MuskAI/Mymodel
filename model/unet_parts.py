@@ -177,3 +177,19 @@ class OutConv(nn.Module):
         x = self.conv(x)
         x = torch.nn.Sigmoid()(x)
         return x
+class TwoStageOut(nn.Module):
+    def __init__(self, in_channels, out_channles):
+        super(TwoStageOut, self).__init__()
+        self.fuse_stage_out = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channles, kernel_size=3, padding=1),
+            nn.BatchNorm2d(out_channles),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=out_channles, out_channels=1, kernel_size=3, padding=1),
+            nn.BatchNorm2d(1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x1, x2):
+        x = torch.cat([x1, x2], dim=1)
+        x = self.fuse_stage_out(x)
+        return x

@@ -21,7 +21,7 @@ import cv2 as cv
 from functions import sigmoid_cross_entropy_loss, cross_entropy_loss,l1_loss,wce_huber_loss
 from os.path import join, split, isdir, isfile, splitext, split, abspath, dirname
 from utils import to_none_class_map
-device = torch.device("cpu")
+device = torch.device("cuda")
 
 class TestDataset:
     def __init__(self,src_data_dir=None,gt_data_dir=None,output_dir=None,save_percent=0.05):
@@ -30,7 +30,7 @@ class TestDataset:
         self.gt_data_dir = gt_data_dir
         self.model_dir = output_dir
         self.output_dir = output_dir
-        self.read_test_data(self)
+        self.read_test_data()
 
     def read_test_data(self):
         test_data_path = self.src_data_dir
@@ -44,6 +44,8 @@ class TestDataset:
             for index, name in enumerate(tqdm(image_name)):
                 image_path = os.path.join(test_data_path, name)
                 img = Image.open(image_path)
+                if len(img.split()) == 4:
+                    img = img.convert('RGB')
                 img = torchvision.transforms.Compose([
                     # AddGlobalBlur(p=0.5),
                     torchvision.transforms.ToTensor(),
@@ -54,10 +56,10 @@ class TestDataset:
                 img = img.unsqueeze(0)
                 #
                 # img = img[np.newaxis, :, :, :]
-                img = img.cpu()
+                img = img.cuda()
                 output = model1(img)[0]
                 del img
-                output = np.array(output.detach().numpy(), dtype='float32')
+                output = np.array(output.cpu().detach().numpy(), dtype='float32')
                 output = output.squeeze(0)
                 output = np.transpose(output, (1, 2, 0))
                 output_ = output.squeeze(2)
@@ -74,7 +76,7 @@ class TestDataset:
                 output = np.array(output_) * 255
                 output = np.asarray(output, dtype='uint8')
                 cv.imwrite(os.path.join(output_path, 'output_' + name), output)
-
+                torch.cuda.empty_cache()
         except Exception as e:
             traceback.print_exc()
             print(e)
@@ -117,26 +119,6 @@ class CMTest(TestDataset):
         try:
             super(CMTest,self).__init__(src_data_dir=os.path.join(self.src_data_dir,'train_src'), output_dir=self.src_data_train_output_dir)
             super(CMTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir,'test_src'), output_dir=self.src_data_test_output_dir)
-        except:
-            pass
-class CoverageTest(TestDataset):
-    def __init__(self, src_data_dir=None, output_dir=None):
-        self.src_data_dir = os.path.join(data_dir,'public_dataset/coverage')
-        self.src_data_output_dir = os.path.join(output_dir, 'coverage_test')
-        if not os.path.exists(self.src_data_output_dir):
-            os.mkdir(self.src_data_output_dir)
-
-        self.src_data_train_output_dir = os.path.join(self.src_data_output_dir, 'pred_train')
-        if not os.path.exists(self.src_data_train_output_dir):
-            os.mkdir(self.src_data_train_output_dir)
-
-        self.src_data_test_output_dir = os.path.join(self.src_data_output_dir, 'pred_test')
-        if not os.path.exists(self.src_data_test_output_dir):
-            os.mkdir(self.src_data_test_output_dir)
-        try:
-            super(CoverageTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir, 'src'),
-                                         output_dir=self.src_data_train_output_dir,save_percent=1)
-
         except:
             pass
 class TextureTestSP(TestDataset):
@@ -194,6 +176,26 @@ class TemplateTest(TestDataset):
 
         super(TemplateTest,self).__init__(src_data_dir=os.path.join(self.src_data_dir,'train_src'), output_dir=self.src_data_train_output_dir)
         super(TestDataset, self).__init__(src_data_dir=os.path.join(self.src_data_dir,'test_src'), output_dir=self.src_data_test_output_dir)
+class CoverageTest(TestDataset):
+    def __init__(self, src_data_dir=None, output_dir=None):
+        self.src_data_dir = os.path.join(data_dir,'public_dataset/coverage')
+        self.src_data_output_dir = os.path.join(output_dir, 'coverage_test')
+        if not os.path.exists(self.src_data_output_dir):
+            os.mkdir(self.src_data_output_dir)
+
+        self.src_data_train_output_dir = os.path.join(self.src_data_output_dir, 'pred_train')
+        if not os.path.exists(self.src_data_train_output_dir):
+            os.mkdir(self.src_data_train_output_dir)
+
+        self.src_data_test_output_dir = os.path.join(self.src_data_output_dir, 'pred_test')
+        if not os.path.exists(self.src_data_test_output_dir):
+            os.mkdir(self.src_data_test_output_dir)
+
+        super(CoverageTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir, 'src'),
+                                     output_dir=self.src_data_train_output_dir,save_percent=1)
+
+
+
 class CasiaTest(TestDataset):
     def __init__(self, src_data_dir=None, output_dir=None):
 
@@ -209,12 +211,31 @@ class CasiaTest(TestDataset):
         self.src_data_test_output_dir = os.path.join(self.src_data_output_dir, 'pred_test')
         if not os.path.exists(self.src_data_test_output_dir):
             os.mkdir(self.src_data_test_output_dir)
-        try:
-            super(CasiaTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir, 'src'),
-                                         output_dir=self.src_data_train_output_dir,save_percent=1)
 
-        except:
-            pass
+        super(CasiaTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir, 'src'),
+                                     output_dir=self.src_data_train_output_dir,save_percent=1)
+
+
+class ColumbiaTest(TestDataset):
+    def __init__(self, src_data_dir=None, output_dir=None):
+
+        self.src_data_dir = os.path.join(data_dir,'public_dataset/columbia')
+        self.src_data_output_dir = os.path.join(output_dir, 'columbia_test')
+        if not os.path.exists(self.src_data_output_dir):
+            os.mkdir(self.src_data_output_dir)
+
+        self.src_data_train_output_dir = os.path.join(self.src_data_output_dir, 'pred_train')
+        if not os.path.exists(self.src_data_train_output_dir):
+            os.mkdir(self.src_data_train_output_dir)
+
+        self.src_data_test_output_dir = os.path.join(self.src_data_output_dir, 'pred_test')
+        if not os.path.exists(self.src_data_test_output_dir):
+            os.mkdir(self.src_data_test_output_dir)
+
+        super(ColumbiaTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir, 'src'),
+                                     output_dir=self.src_data_train_output_dir,save_percent=1)
+
+
 class Negative(TestDataset):
     def __init__(self, src_data_dir=None, output_dir=None):
 
@@ -257,15 +278,15 @@ class COD10K(TestDataset):
         except:
             pass
 if __name__ == '__main__':
-    output_path = '/home/liu/chenhaoran/test/0310_std_unet_factor2_第一阶段纯unet,所有数据'
+    output_path = '/home/liu/chenhaoran/test/0319_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束'
     if os.path.exists(output_path):
         pass
     else:
         os.mkdir(output_path)
         print('mkdir :',output_path)
-    model_path1 = '/home/liu/chenhaoran/Mymodel/save_model/0310_stage1_后缀为0306的模型,fine第一阶段/0310_stage1_后缀为0306的模型,fine第一阶段_checkpoint11-stage1-0.149695-f10.801685-precision0.943942-acc0.989272-recall0.700395.pth'
+    model_path1 = '/home/liu/chenhaoran/Mymodel/save_model/0319_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束/stage1_0319_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束_checkpoint42-two_stage-0.149939-f10.776356-precision0.666271-acc0.994249-recall0.936397.pth'
     # model_path2 = '/home/liu/chenhaoran/Mymodel/save_model/0308_stage1&2_后缀为0306的模型,两阶段联合训练/stage2_0308_stage1&2_后缀为0306的模型,两阶段联合训练_checkpoint6-two_stage-0.316201-f10.334154-precision0.973132-acc0.982770-recall0.206252.pth'
-    checkpoint1 = torch.load(model_path1, map_location=torch.device('cpu'))
+    checkpoint1 = torch.load(model_path1, map_location=torch.device('cuda'))
     # checkpoint2 = torch.load(model_path2, map_location=torch.device('cpu'))
     model1 = Net1().to(device)
     model1.load_state_dict(checkpoint1['state_dict'])
@@ -278,14 +299,15 @@ if __name__ == '__main__':
 
 
     try:
-        # CasiaTest(output_dir=output_path)
-        # CoverageTest(output_dir=output_path)
-        TextureTestSP(output_dir=output_path)
-        TextureTestCM(output_dir=output_path)
-        COD10K(output_dir=output_path)
-        TemplateTest(output_dir=output_path)
-        Negative(output_dir=output_path)
-        SPTest(output_dir=output_path)
-        CMTest(output_dir=output_path)
+        CasiaTest(output_dir=output_path)
+        CoverageTest(output_dir=output_path)
+        ColumbiaTest(output_dir=output_path)
+        # TextureTestSP(output_dir=output_path)
+        # TextureTestCM(output_dir=output_path)
+        # COD10K(output_dir=output_path)
+        # TemplateTest(output_dir=output_path)
+        # Negative(output_dir=output_path)
+        # SPTest(output_dir=output_path)
+        # CMTest(output_dir=output_path)
     except Exception as e:
         traceback.print_exc(e)

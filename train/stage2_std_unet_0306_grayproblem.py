@@ -345,7 +345,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
             ##########################################
             # deal with one stage issue
             # 建立loss
-            loss_stage_1 = wce_dice_huber_loss(one_stage_outputas[0], labels_band)
+            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
             loss_stage_2 = wce_dice_huber_loss(two_stage_outputs[0], labels_dou_edge)

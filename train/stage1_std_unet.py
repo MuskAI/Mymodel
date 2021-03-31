@@ -29,7 +29,7 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0319_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束'
+name = '0330_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束,加全局模糊'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
 parser.add_argument('--batch_size', default=12, type=int, metavar='BT',
@@ -47,7 +47,7 @@ parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum')
 parser.add_argument('--weight_decay', '--weight_decay', default=2e-2, type=float,
                     metavar='W', help='default weight decay')
-parser.add_argument('--stepsize', default=5, type=int,
+parser.add_argument('--stepsize', default=4, type=int,
                     metavar='SS', help='learning rate step size')
 parser.add_argument('--gamma', '--gm', default=0.1, type=float,
                     help='learning rate decay parameter: Gamma')
@@ -121,7 +121,7 @@ def main():
                   'texture_sp': True,
                   'texture_cm': True,
                   'columb': False,
-                  'negative': False,
+                  'negative': True,
                   'negative_casia': False,
                   }
 
@@ -138,9 +138,9 @@ def main():
                        'negative_casia': False,
                        }
     # 2 define 3 types
-    trainData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='train')
-    valData = TamperDataset(stage_type='stage2', using_data=using_data, train_val_test_mode='val')
-    testData = TamperDataset(stage_type='stage2', using_data=using_data_test, train_val_test_mode='test')
+    trainData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='train')
+    valData = TamperDataset(stage_type='stage1', using_data=using_data, train_val_test_mode='val')
+    testData = TamperDataset(stage_type='stage1', using_data=using_data_test, train_val_test_mode='test')
 
     # 3 specific dataloader
     trainDataLoader = torch.utils.data.DataLoader(trainData, batch_size=args.batch_size, shuffle=True,num_workers=4,
@@ -257,8 +257,8 @@ def train(model1, optimizer1, dataParser, epoch):
         # 准备输入数据
         images = input_data['tamper_image'].cuda()
         labels_band = input_data['gt_band'].cuda()
-        labels_dou_edge = input_data['gt_dou_edge'].cuda()
-        relation_map = input_data['relation_map']
+        # labels_dou_edge = input_data['gt_dou_edge'].cuda()
+        # relation_map = input_data['relation_map']
 
         if torch.cuda.is_available():
             loss_8t = torch.zeros(()).cuda()
@@ -285,7 +285,7 @@ def train(model1, optimizer1, dataParser, epoch):
             ##########################################
             # deal with one stage issue
             # 建立loss
-            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_dou_edge)
+            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
             # for c_index, c in enumerate(two_stage_outputs[1:9]):
@@ -356,8 +356,8 @@ def val(model1, dataParser, epoch):
         # 准备输入数据
         images = input_data['tamper_image'].cuda()
         labels_band = input_data['gt_band'].cuda()
-        labels_dou_edge = input_data['gt_dou_edge'].cuda()
-        relation_map = input_data['relation_map']
+        # labels_dou_edge = input_data['gt_dou_edge'].cuda()
+        # relation_map = input_data['relation_map']
 
         if torch.cuda.is_available():
             loss_8t = torch.zeros(()).cuda()
@@ -375,7 +375,7 @@ def val(model1, dataParser, epoch):
             ##########################################
             # deal with one stage issue
             # 建立loss
-            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_dou_edge)
+            loss_stage_1 = wce_dice_huber_loss(one_stage_outputs[0], labels_band)
             ##############################################
             # deal with two stage issues
 
@@ -401,10 +401,10 @@ def val(model1, dataParser, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        f1score_stage1 = my_f1_score(one_stage_outputs[0], labels_dou_edge)
-        precisionscore_stage1 = my_precision_score(one_stage_outputs[0], labels_dou_edge)
-        accscore_stage1 = my_acc_score(one_stage_outputs[0], labels_dou_edge)
-        recallscore_stage1 = my_recall_score(one_stage_outputs[0], labels_dou_edge)
+        f1score_stage1 = my_f1_score(one_stage_outputs[0], labels_band)
+        precisionscore_stage1 = my_precision_score(one_stage_outputs[0], labels_band)
+        accscore_stage1 = my_acc_score(one_stage_outputs[0], labels_band)
+        recallscore_stage1 = my_recall_score(one_stage_outputs[0], labels_band)
 
         writer.add_scalar('val_f1_score_stage1', f1score_stage1, global_step=epoch * val_epoch + batch_index)
         writer.add_scalar('val_precision_score_stage1', precisionscore_stage1,
@@ -458,7 +458,7 @@ def test(model1,dataParser, epoch):
         # 准备输入数据
 
         images = input_data['tamper_image'].cuda()
-        labels_dou_edge = input_data['gt_dou_edge'].cuda()
+        # labels_dou_edge = input_data['gt_dou_edge'].cuda()
         # relation_map = input_data['relation_map']
         with torch.set_grad_enabled(False):
             images.requires_grad = False
