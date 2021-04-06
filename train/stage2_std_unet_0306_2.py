@@ -307,6 +307,7 @@ def train(model1, model2, optimizer1,optimizer2, dataParser, epoch):
     model2.train()
     end = time.time()
 
+
     for batch_index, input_data in enumerate(dataParser):
         # 读取数据的时间
         data_time.update(time.time() - end)
