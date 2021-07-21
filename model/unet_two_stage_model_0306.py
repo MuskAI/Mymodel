@@ -49,8 +49,6 @@ class UNetStage1(nn.Module):
         stage_x4 = self.up4(stage_x3, x1)
         logits = self.outc(stage_x4)
         return [logits, stage_x1, stage_x2, stage_x3]
-
-
 class UNetStage2(nn.Module):
     def __init__(self, n_channels=4, bilinear=False):
         super(UNetStage2, self).__init__()

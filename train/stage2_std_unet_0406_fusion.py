@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import torch
 import torch.optim as optim
 import torch.utils.data.dataloader
@@ -30,18 +31,18 @@ description:
 """"""""""""""""""""""""""""""
 "          参数               "
 """"""""""""""""""""""""""""""
-name = '0329_stage1&2_后缀为0306的模型,没有预训练'
+name = '0406_stage1&2_后缀为0406的模型，小网络'
 
 parser = argparse.ArgumentParser(description='PyTorch Training')
-parser.add_argument('--batch_size', default=10, type=int, metavar='BT',
+parser.add_argument('--batch_size', default=5, type=int, metavar='BT',
                     help='batch size')
 
 # =============== optimizer
 parser.add_argument('--lr', '--learning_rate', default=1e-2, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--resume', default=[
-    '',
-    ''], type=list, metavar='PATH',
+    '/home/liu/chenhaoran/Mymodel/save_model/0401_stage1&2_后缀为0306的模型,全局模糊/stage1_0401_stage1&2_后缀为0306的模型,全局模糊_checkpoint47-two_stage-0.222808-f10.586741-precision0.853569-acc0.986115-recall0.490909.pth',
+    '/home/liu/chenhaoran/Mymodel/save_model/0401_stage1&2_后缀为0306的模型,全局模糊/stage2_0401_stage1&2_后缀为0306的模型,全局模糊_checkpoint47-two_stage-0.222808-f10.069201-precision0.036919-acc0.819140-recall0.779522.pth'], type=list, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
 
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
@@ -151,9 +152,11 @@ def main():
     # model
     model1 = Net1()
     model2 = Net2()
+    model3 = Net3(2,10)
     if torch.cuda.is_available():
         model1.cuda()
         model2.cuda()
+        model3.cuda()
     else:
         model1.cpu()
         model2.cpu()
@@ -162,11 +165,11 @@ def main():
     # 如果没有这一步会根据正态分布自动初始化
     model1.apply(weights_init)
     model2.apply(weights_init)
-
+    model3.apply(weights_init)
     # 模型可持续化
     optimizer1 = optim.Adam(model1.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
     optimizer2 = optim.Adam(model2.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
-
+    optimizer3 = optim.Adam(model3.parameters(), lr=1e-2, betas=(0.9, 0.999), eps=1e-8)
     # 加载模型
     if isfile(args.resume[0]) and isfile(args.resume[1]):
         print("=> loading checkpoint '{}'".format(args.resume))
@@ -204,13 +207,14 @@ def main():
     # 调整学习率
     scheduler1 = lr_scheduler.StepLR(optimizer1, step_size=args.stepsize, gamma=args.gamma)
     scheduler2 = lr_scheduler.StepLR(optimizer2, step_size=args.stepsize, gamma=args.gamma)
+    scheduler3 = lr_scheduler.StepLR(optimizer3, step_size=args.stepsize, gamma=args.gamma)
     # 数据迭代器
     for epoch in range(args.start_epoch, args.maxepoch):
-        train_avg = train(model1=model1, model2=model2, optimizer1=optimizer1, optimizer2=optimizer2,
+        train_avg = train(model1=model1, model2=model2, model3=model3,optimizer1=optimizer1, optimizer2=optimizer2,optimizer3=optimizer3,
                           dataParser=trainDataLoader, epoch=epoch)
 
-        val_avg = val(model1=model1, model2=model2, dataParser=valDataLoader, epoch=epoch)
-        test(model1=model1, model2=model2, dataParser=testDataLoader, epoch=epoch)
+        val_avg = val(model1=model1, model2=model2, model3=model3,dataParser=valDataLoader, epoch=epoch)
+        test(model1=model1, model2=model2, model3=model3,dataParser=testDataLoader, epoch=epoch)
 
         """"""""""""""""""""""""""""""
         "          写入图             "
@@ -284,7 +288,7 @@ def main():
 """"""""""""""""""""""""""""""
 
 
-def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
+def train(model1, model2, model3, optimizer1, optimizer2, optimizer3, dataParser, epoch):
     # 读取数据的迭代器
 
     train_epoch = len(dataParser)
@@ -339,7 +343,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
 
             rgb_pred_rgb = torch.cat((one_stage_outputs[0], images), 1)
             two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
-
+            net3_outputs = model3(one_stage_outputs[0],two_stage_outputs[0])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
@@ -358,7 +362,9 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
 
             # print(loss_stage_2)
             # print(map8_loss_value)
-            loss = (loss_stage_2 * 12 + loss_8t) / 20 + loss_stage_1
+            loss_net3 = wce_dice_huber_loss(net3_outputs, labels_dou_edge)
+            loss = loss_net3
+            # loss = (loss_stage_2 * 12 + loss_8t) / 20 + loss_stage_1
             #######################################
             # 总的LOSS
             # print(type(loss_stage_2.item()))
@@ -395,7 +401,7 @@ def train(model1, model2, optimizer1, optimizer2, dataParser, epoch):
 
 
 @torch.no_grad()
-def val(model1, model2, dataParser, epoch):
+def val(model1, model2, model3,dataParser, epoch):
     # 读取数据的迭代器
 
     val_epoch = len(dataParser)
@@ -446,6 +452,7 @@ def val(model1, model2, dataParser, epoch):
             one_stage_outputs = model1(images)
             rgb_pred_rgb = torch.cat((one_stage_outputs[0], images), 1)
             two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
+            net3_outputs = model3(one_stage_outputs[0],two_stage_outputs[0])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
@@ -463,7 +470,9 @@ def val(model1, model2, dataParser, epoch):
                 map8_loss_value[c_index].update(one_loss_t.item())
 
             loss_stage_2 += loss_8t
-            loss = loss_stage_2 / 20
+            loss_net3 = wce_dice_huber_loss(net3_outputs, labels_dou_edge)
+            loss = loss_net3
+            # loss = loss_stage_2 / 20
 
             #######################################
             # 总的LOSS
@@ -552,7 +561,7 @@ def val(model1, model2, dataParser, epoch):
 
 
 @torch.no_grad()
-def test(model1, model2, dataParser, epoch):
+def test(model1, model2, model3,dataParser, epoch):
     # 读取数据的迭代器
     # 变量保存
     batch_time = Averagvalue()
@@ -575,15 +584,16 @@ def test(model1, model2, dataParser, epoch):
 
             rgb_pred_rgb = torch.cat((one_stage_outputs[0], images), 1)
             two_stage_outputs = model2(rgb_pred_rgb, one_stage_outputs[1], one_stage_outputs[2], one_stage_outputs[3])
+            net3_outputs = model3(one_stage_outputs[0],two_stage_outputs[0])
             """"""""""""""""""""""""""""""
             "         Loss 函数           "
             """"""""""""""""""""""""""""""
             ##########################################
             # deal with one stage issue
             # 建立loss
-            z = torch.cat((one_stage_outputs[0], two_stage_outputs[0]), 0)
+            z = torch.cat((one_stage_outputs[0], two_stage_outputs[0],net3_outputs), 0)
             writer.add_image('one&two_stage_image_batch:%d' % (batch_index),
-                             make_grid(z, nrow=2), global_step=epoch)
+                             make_grid(z, nrow=3), global_step=epoch)
 
 
 if __name__ == '__main__':

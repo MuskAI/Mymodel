@@ -1,22 +1,13 @@
 """
-@author:haoran
-time:0329
-
-"""
-
-"""
 @author :chenhaoran
 time: 03/06
-第二个版本：
-这个版本相对于第一个版本将bilinear改为了False
 """
 import torch.nn.functional as F
-from torchsummary import summary
 import sys
 
 sys.path.append('.')
 import torch.nn as nn
-from .unet_parts import *
+from unet_parts import *
 
 
 
@@ -55,8 +46,6 @@ class UNetStage1(nn.Module):
         stage_x4 = self.up4(stage_x3, x1)
         logits = self.outc(stage_x4)
         return [logits, stage_x1, stage_x2, stage_x3]
-
-
 class UNetStage2(nn.Module):
     def __init__(self, n_channels=4, bilinear=False):
         super(UNetStage2, self).__init__()
@@ -147,35 +136,11 @@ class UNetStage2(nn.Module):
         return [x, r1, r2, r3, r4, r5, r6, r7, r8]
 
 
-
-class TwoStageFusion(nn.Module):
-    def __init__(self, in_channels, out_channles):
-        super(TwoStageFusion, self).__init__()
-        self.fuse_stage_out = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channles, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channles),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=out_channles, out_channels=3, kernel_size=3, padding=1),
-            nn.BatchNorm2d(3),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=3, out_channels=1, kernel_size=3, padding=1),
-            nn.BatchNorm2d(1),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x1, x2):
-        x = torch.cat([x1, x2], dim=1)
-        x = self.fuse_stage_out(x)
-        return x
-
-
-
 if __name__ == '__main__':
     model1 = UNetStage1(3,bilinear=False).cpu()
     model2 = UNetStage2(4, bilinear=False).cpu()
-    in_size = 321
+    # in_size = 321
     # summary(model=model1,(3,320,320),device='cpu',batch_size=2)
-    summary(model2, [(4, in_size, in_size),(512, in_size // 8, in_size // 8),(256, in_size // 4, in_size // 4)
-                    , (128, in_size // 2, in_size // 2) ], device='cpu', batch_size=2)
+    # summary(model2, [(4, in_size, in_size),(512, in_size // 8, in_size // 8),(256, in_size // 4, in_size // 4)
+    #                 , (128, in_size // 2, in_size // 2) ], device='cpu', batch_size=2)
     # summary(model1, (3, 321, 321), device='cpu', batch_size=2)
-

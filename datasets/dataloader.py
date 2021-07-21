@@ -760,33 +760,6 @@ class AddGlobalBlur(object):
             return img
 
 
-class AddEdgeBlur(object):
-    """
-    增加全局模糊
-    """
-
-    def __init__(self, gt_img=None, kernel_size=1, p=1):
-        self.gt = gt_img
-        self.kernel_size = kernel_size
-        self.p = p
-        kernel_size = random.randint(0, 15) / 10
-
-    def __call__(self, img):
-        """
-        Args:
-            img (PIL Image): PIL Image
-        Returns:
-            PIL Image: PIL image.
-        """
-        if random.random() < self.p:  # 概率判断
-            img_ = np.array(img).copy()
-            h, w, c = img_.shape
-            img_ = Image.fromarray(img_)
-            img_ = img_.filter(ImageFilter.GaussianBlur(radius=self.kernel_size))
-            img_ = np.array(img_)
-            return Image.fromarray(img_.astype('uint8')).convert('RGB')
-        else:
-            return img
 
 
 if __name__ == '__main__':

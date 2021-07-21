@@ -193,9 +193,6 @@ class CoverageTest(TestDataset):
 
         super(CoverageTest, self).__init__(src_data_dir=os.path.join(self.src_data_dir, 'src'),
                                      output_dir=self.src_data_train_output_dir,save_percent=1)
-
-
-
 class CasiaTest(TestDataset):
     def __init__(self, src_data_dir=None, output_dir=None):
 
@@ -278,7 +275,7 @@ class COD10K(TestDataset):
         except:
             pass
 if __name__ == '__main__':
-    output_path = '/home/liu/chenhaoran/test/0319_stage1后缀为0306的模型，训练双边缘第一阶段,无八张图约束'
+    output_path = '/home/liu/chenhaoran/test/0510_for_show'
     if os.path.exists(output_path):
         pass
     else:
@@ -299,9 +296,9 @@ if __name__ == '__main__':
 
 
     try:
-        CasiaTest(output_dir=output_path)
+        # CasiaTest(output_dir=output_path)
         CoverageTest(output_dir=output_path)
-        ColumbiaTest(output_dir=output_path)
+        # ColumbiaTest(output_dir=output_path)
         # TextureTestSP(output_dir=output_path)
         # TextureTestCM(output_dir=output_path)
         # COD10K(output_dir=output_path)
